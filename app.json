@@ -1,0 +1,16 @@
+{
+    "id": "c0588b40-1ef1-41e1-bba1-777ba30ca8ab",
+    "version": "0.0.1",
+    "requiredApiVersion": "^1.44.0",
+    "iconFile": "icon.png",
+    "author": {
+        "name": "Devansh Kansagra",
+        "homepage": "https://github.com/RocketChat/JiraIntegrationApp_GSoC2026",
+        "support": "https://github.com/RocketChat/JiraIntegrationApp_GSoC2026/issues"
+    },
+    "name": "Jira",
+    "nameSlug": "jira",
+    "classFile": "JiraApp.ts",
+    "description": "Jira Integration for Rocket.Chat",
+    "implements": []
+}
