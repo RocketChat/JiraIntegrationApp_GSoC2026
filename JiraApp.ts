@@ -7,6 +7,7 @@ import {
 import { App } from "@rocket.chat/apps-engine/definition/App";
 import { IAppInfo } from "@rocket.chat/apps-engine/definition/metadata";
 import { settings } from "./src/settings/settings";
+import { JiraCommand } from "./src/commands/JiraCommand";
 
 export class JiraApp extends App {
     constructor(info: IAppInfo, logger: ILogger, accessors: IAppAccessors) {
@@ -21,6 +22,10 @@ export class JiraApp extends App {
             settings.map((setting) => {
                 configurationExtend.settings.provideSetting(setting);
             }),
+        );
+
+        await configurationExtend.slashCommands.provideSlashCommand(
+            new JiraCommand(this),
         );
     }
 }
