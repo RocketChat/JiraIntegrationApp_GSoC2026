@@ -72,3 +72,24 @@ export async function sendDM(
 
     await modify.getCreator().finish(msg);
 }
+
+export async function sendDMNotification(
+    read: IRead,
+    modify: IModify,
+    sender: IUser,
+    message: string,
+) {
+    const appUser = (await read.getUserReader().getAppUser()) as IUser;
+    const room = await read
+        .getRoomReader()
+        .getDirectByUsernames([sender.username, appUser.username]);
+
+    const msg = modify
+        .getCreator()
+        .startMessage()
+        .setSender(appUser)
+        .setRoom(room)
+        .setText(message);
+
+    await read.getNotifier().notifyUser(sender, msg.getMessage());
+}

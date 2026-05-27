@@ -8,6 +8,7 @@ import { IRoom } from "@rocket.chat/apps-engine/definition/rooms";
 import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { JiraApp } from "../../JiraApp";
 import { sendNotification } from "../helpers/message";
+import { authorize } from "../oauth/authorize";
 
 export class Handler {
     constructor(
@@ -48,7 +49,7 @@ export class Handler {
     }
 
     async login(): Promise<void> {
-        await sendNotification(this.read, this.modify, this.sender, this.room, "Handler for login");
+        await authorize(this.app, this.read, this.modify, this.sender, this.room, this.persistence)
     }
 
     async create(args: string[]): Promise<void> {
