@@ -11,7 +11,10 @@ import { settings } from "./src/settings/settings";
 import { JiraCommand } from "./src/commands/JiraCommand";
 import { JiraSDK } from "./src/core/JiraSDK";
 import { CallbackEndpoint } from "./src/api/callback";
-import { ApiVisibility, ApiSecurity } from "@rocket.chat/apps-engine/definition/api";
+import {
+    ApiVisibility,
+    ApiSecurity,
+} from "@rocket.chat/apps-engine/definition/api";
 
 export class JiraApp extends App {
     constructor(info: IAppInfo, logger: ILogger, accessors: IAppAccessors) {
@@ -19,7 +22,7 @@ export class JiraApp extends App {
     }
 
     public getJiraSDK(): JiraSDK {
-        return new JiraSDK(this);
+        return new JiraSDK(this, this.getAccessors().http);
     }
 
     public async initialize(

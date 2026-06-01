@@ -34,18 +34,11 @@ export class CallbackEndpoint extends ApiEndpoint {
 
         const sdk = this.app.getJiraSDK();
 
-        await sdk.getAccessToken(
-            read,
-            code,
-            user,
-            modify,
-            http,
-            persis,
-        );
+        await sdk.getAccessToken(read, code, user, modify, persis);
 
         return {
             status: 200,
-            content: authTemplate
+            content: authTemplate,
         };
     }
 }
