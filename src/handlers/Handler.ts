@@ -181,6 +181,22 @@ export class Handler {
             .getUiController()
             .openSurfaceView(modal, { triggerId: this.triggerId }, this.sender);
     }
+
+    async connect(): Promise<void> {
+        const modal = await ConnectJiraProject({
+            app: this.app,
+            read: this.read,
+            modify: this.modify,
+            http: this.http,
+            sender: this.sender,
+            room: this.room,
+            persis: this.persistence,
+            triggerId: this.triggerId,
+            id: this.app.getID()
+        });
+
+        await this.modify.getUiController().openSurfaceView(modal, { triggerId: this.triggerId }, this.sender);
+    }
     async myIssues(): Promise<void> {
         await sendNotification(
             this.read,
