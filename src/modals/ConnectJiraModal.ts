@@ -75,7 +75,7 @@ export async function ConnectJiraProject({
 
     return {
         type: UIKitSurfaceType.MODAL,
-        id: ModalEnum.JIRA_CONNECT_MODAL,
+        id: ModalEnum.JIRA_CONNECT_MODAL + "|" + room?.id,
         title: {
             type: TextTypes.PLAIN_TEXT,
             text: `Connect #${room?.slugifiedName} with Jira Project`,
