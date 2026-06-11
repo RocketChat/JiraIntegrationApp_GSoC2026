@@ -7,16 +7,17 @@ import {
 import { JiraApp } from "../../JiraApp";
 import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { getCallbackURL } from "../helpers/getEndpointURLS";
-import { getCredentials } from "../helpers/getSettings";
+import { getCloudURL, getCredentials } from "../helpers/getSettings";
 import { AuthPersistence } from "../persistence/authPersistence";
-import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
+import { IJiraIssue, IJiraIssueResponse } from "../interfaces/IJiraIssue";
 import { IJiraProject } from "../interfaces/IJiraProject";
 import { sendDMNotification } from "../helpers/message";
 import { URLEnum } from "../enums/URLEnum";
+import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
 
 export class JiraSDK {
-    private app: JiraApp;
-    private http: IHttp;
+    private readonly app: JiraApp;
+    private readonly http: IHttp;
     constructor(app: JiraApp, http: IHttp) {
         this.app = app;
         this.http = http;
@@ -27,28 +28,24 @@ export class JiraSDK {
         code: string,
         user: IUser,
         modify: IModify,
-        http: IHttp,
         persis: IPersistence,
     ): Promise<IJiraAuthToken> {
         const { clientId, clientSecret } = await getCredentials(read);
         const redirectUri = await getCallbackURL(this.app);
 
-        const response = await http.post(
-            URLEnum.TOKEN_URL,
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                },
-                data: {
-                    grant_type: "authorization_code",
-                    client_id: clientId,
-                    client_secret: clientSecret,
-                    code,
-                    redirect_uri: redirectUri,
-                },
+        const response = await this.http.post(URLEnum.TOKEN_URL, {
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
             },
-        );
+            data: {
+                grant_type: "authorization_code",
+                client_id: clientId,
+                client_secret: clientSecret,
+                code,
+                redirect_uri: redirectUri,
+            },
+        });
 
         const responseData = response.data;
 
@@ -108,21 +105,18 @@ export class JiraSDK {
 
         const { clientId, clientSecret } = await getCredentials(read);
 
-        const response = await http.post(
-            URLEnum.TOKEN_URL,
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                },
-                data: {
-                    grant_type: "refresh_token",
-                    client_id: clientId,
-                    client_secret: clientSecret,
-                    refresh_token: existingToken.refreshToken,
-                },
+        const response = await http.post(URLEnum.TOKEN_URL, {
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
             },
-        );
+            data: {
+                grant_type: "refresh_token",
+                client_id: clientId,
+                client_secret: clientSecret,
+                refresh_token: existingToken.refreshToken,
+            },
+        });
 
         const responseData = response.data;
 
@@ -152,6 +146,105 @@ export class JiraSDK {
         return token;
     }
 
+    public async createJiraIssue(
+        read: IRead,
+        persis: IPersistence,
+        user: IUser,
+        issue: IJiraIssue,
+    ): Promise<IJiraIssueResponse> {
+        const authPersistence = new AuthPersistence(
+            persis,
+            read.getPersistenceReader(),
+        );
+        let token = await authPersistence.getAccessToken(user);
+
+        if (!token) {
+            throw new Error(
+                "Not authenticated with Jira. Please run `/jira login` first.",
+            );
+        }
+
+        if (this.isTokenExpired(token)) {
+            token = await this.refreshAccessToken(
+                read,
+                user,
+                this.http,
+                persis,
+            );
+        }
+
+        const cloudId = await this.getCloudId(token.accessToken);
+        const siteURL = await getCloudURL(read);
+
+        const issueBody: Record<string, any> = {
+            fields: {
+                project: { key: issue.projectKey },
+                summary: issue.summary,
+                issuetype: { name: issue.issueType },
+            },
+        };
+
+        if (issue.description) {
+            issueBody.fields.description = {
+                type: "doc",
+                version: 1,
+                content: [
+                    {
+                        type: "paragraph",
+                        content: [{ type: "text", text: issue.description }],
+                    },
+                ],
+            };
+        }
+
+        if (issue.assignee) {
+            const accountResult = await this.getAccountId(
+                issue.assignee.emails[0].address,
+                token,
+                cloudId,
+            );
+            if (accountResult.success) {
+                issueBody.fields.assignee = {
+                    accountId: accountResult.accountId,
+                };
+            }
+        }
+
+        if (issue.priority) {
+            issueBody.fields.priority = { name: issue.priority };
+        }
+
+        if (issue.deadline) {
+            issueBody.fields.duedate = issue.deadline
+                .toISOString()
+                .split("T")[0];
+        }
+
+        const response = await this.http.post(
+            `${URLEnum.API_URL}${cloudId}/rest/api/3/issue`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token.accessToken}`,
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                data: issueBody,
+            },
+        );
+
+        if (!response.statusCode.toString().startsWith("2") || !response.data) {
+            throw new Error(
+                `Failed to create Jira issue. Status: ${response.statusCode}. ` +
+                    `Response: ${response.content || JSON.stringify(response.data)}`,
+            );
+        }
+
+        return {
+            id: response.data.id,
+            key: response.data.key,
+            issueURL: `${siteURL}/browse/${response.data.key}`,
+        };
+    }
 
     public async getJiraProjects(
         token: IJiraAuthToken,
@@ -179,7 +272,10 @@ export class JiraSDK {
             },
         );
 
-        if (!response.statusCode.toString().startsWith("2") || !Array.isArray(response.data)) {
+        if (
+            !response.statusCode.toString().startsWith("2") ||
+            !Array.isArray(response.data)
+        ) {
             throw new Error(
                 `Failed to fetch Jira projects. Status: ${response.statusCode}. Response: ${response.content || JSON.stringify(response.data)}`,
             );
@@ -192,13 +288,37 @@ export class JiraSDK {
         }));
     }
 
-    private async getCloudId(accessToken: string): Promise<string> {
-        const response = await this.http.get(URLEnum.ACCESSIBLE_RESOURCES_URL, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                Accept: "application/json",
+    private async getAccountId(
+        email: string,
+        token: IJiraAuthToken,
+        cloudID: string,
+    ) {
+        const response = await this.http.get(
+            `${URLEnum.API_URL}${cloudID}/rest/api/3/user/search?query=${encodeURIComponent(email)}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token?.accessToken}`,
+                    Accept: "application/json",
+                },
             },
-        });
+        );
+
+        if (response?.data?.length > 0) {
+            return { success: true, accountId: response.data[0].accountId };
+        }
+        return { success: false, error: "User not found in Jira" };
+    }
+
+    private async getCloudId(accessToken: string): Promise<string> {
+        const response = await this.http.get(
+            URLEnum.ACCESSIBLE_RESOURCES_URL,
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
 
         if (
             !response.statusCode.toString().startsWith("2") ||
