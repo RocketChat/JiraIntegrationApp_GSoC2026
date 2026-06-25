@@ -66,3 +66,18 @@ export function issueSharedMessage(params: {
 🔗 **Link:** ${issueURL}
 `;
 }
+
+export function issueUpdateMessage(params: {
+    issueKey: string;
+    field: string;
+    oldValue: string;
+    newValue: string;
+}) {
+    const message = `### Jira issue Updated
+    **Issue:** ${params.issueKey}
+    **Field:** ${params.field}
+    **Changes:** ${params.oldValue} -> ${params.newValue}
+    `;
+
+    return message;
+}
