@@ -20,6 +20,7 @@ import { getCloudURL } from "../helpers/getSettings";
 import {
     issueCreatedMessage,
     issueSharedMessage,
+    issueUpdateMessage,
 } from "../helpers/messageTemplates";
 
 export class Handler {
@@ -453,13 +454,66 @@ export class Handler {
         }
     }
     async setCommands(args: string[]): Promise<void> {
-        await sendNotification(
-            this.read,
-            this.modify,
-            this.sender,
-            this.room,
-            "Handler for setCommands",
+        const field = args[0];
+        const issueKey = args[1];
+        const value = args[2];
+
+        const authPersistence = new AuthPersistence(
+            this.persistence,
+            this.read.getPersistenceReader(),
         );
+
+        const token = (await authPersistence.getAccessToken(
+            this.sender,
+        )) as IJiraAuthToken;
+
+        if (!token) {
+            await sendNotification(
+                this.read,
+                this.modify,
+                this.sender,
+                this.room,
+                "You are not authenticated with Jira. Please run `/jira login` first.",
+            );
+        }
+        try {
+            const res = await this.sdk.updateIssueDetails(
+                this.read,
+                this.persistence,
+                this.sender,
+                token,
+                { issueKey, value, field },
+            );
+
+            const { success, changes } = res;
+
+            if (success) {
+                await sendMessage(
+                    this.read,
+                    this.modify,
+                    this.room,
+                    this.sender,
+                    issueUpdateMessage({
+                        issueKey,
+                        field,
+                        oldValue: changes.existingValue,
+                        newValue: value,
+                    }),
+                );
+            }
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred.";
+            await sendNotification(
+                this.read,
+                this.modify,
+                this.sender,
+                this.room,
+                `Failed to update issue: ${message}`,
+            );
+        }
     }
     async subscribe(args: string[]): Promise<void> {
         await sendNotification(

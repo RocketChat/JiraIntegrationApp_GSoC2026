@@ -1,7 +1,7 @@
 {
     "id": "c0588b40-1ef1-41e1-bba1-777ba30ca8ab",
     "version": "0.0.1",
-    "requiredApiVersion": "^1.44.0",
+    "requiredApiVersion": "^1.63.0",
     "iconFile": "icon.png",
     "author": {
         "name": "Devansh Kansagra",
