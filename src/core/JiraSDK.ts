@@ -14,6 +14,7 @@ import { IJiraProject } from "../interfaces/IJiraProject";
 import { sendDMNotification } from "../helpers/message";
 import { URLEnum } from "../enums/URLEnum";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
+import { getRequest, postRequest, putRequest } from "../helpers/httpMethods";
 
 export class JiraSDK {
     private readonly app: JiraApp;
@@ -176,8 +177,6 @@ export class JiraSDK {
                 persis,
             );
         }
-
-        const cloudId = token.cloudID;
         const siteURL = await getCloudURL(read);
 
         const issueBody: Record<string, any> = {
@@ -198,7 +197,6 @@ export class JiraSDK {
             const accountResult = await this.getAccountId(
                 issue.assignee.emails[0].address,
                 token,
-                cloudId,
             );
             if (accountResult.success) {
                 issueBody.fields.assignee = {
@@ -217,24 +215,10 @@ export class JiraSDK {
                 .split("T")[0];
         }
 
-        const response = await this.http.post(
-            `${URLEnum.API_URL}${cloudId}/rest/api/3/issue`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token.accessToken}`,
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                },
-                data: issueBody,
-            },
-        );
-
-        if (!response.statusCode.toString().startsWith("2")) {
-            throw new Error(
-                `Failed to create Jira issue. Status: ${response.statusCode}. ` +
-                    `Response: ${response.content || JSON.stringify(response.data)}`,
-            );
-        }
+        const response = await postRequest(this.http, "/issue", {
+            token,
+            body: issueBody,
+        });
 
         return {
             id: response.data.id,
@@ -259,22 +243,9 @@ export class JiraSDK {
             );
         }
 
-        const cloudID = token.cloudID;
-        const response = await this.http.get(
-            `${URLEnum.API_URL}${cloudID}/rest/api/3/issue/${issueKey}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token?.accessToken}`,
-                    Accept: "application/json",
-                },
-            },
-        );
-
-        if (!response.statusCode.toString().startsWith("2") || !response.data) {
-            throw new Error(
-                "Unable to fetch the Jira issue, please check the issueKey",
-            );
-        }
+        const response = await getRequest(this.http, `/issue/${issueKey}`, {
+            token,
+        });
 
         const fields = response.data.fields;
 
@@ -332,23 +303,11 @@ export class JiraSDK {
             );
         }
 
-        const cloudId = token.cloudID;
-        const response = await this.http.get(
-            `${URLEnum.API_URL}${cloudId}/rest/api/3/project`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token.accessToken}`,
-                    Accept: "application/json",
-                },
-            },
-        );
+        const response = await getRequest(this.http, "/project", { token });
 
-        if (
-            !response.statusCode.toString().startsWith("2") ||
-            !Array.isArray(response.data)
-        ) {
+        if (!Array.isArray(response.data)) {
             throw new Error(
-                `Failed to fetch Jira projects. Status: ${response.statusCode}. Response: ${response.content || JSON.stringify(response.data)}`,
+                "Failed to fetch Jira projects: unexpected response format.",
             );
         }
 
@@ -376,38 +335,17 @@ export class JiraSDK {
             );
         }
 
-        const cloudID = token.cloudID;
-
         const assigneeEmail = (
             await read.getUserReader().getByUsername(username)
         ).emails[0].address;
 
-        const { accountId } = await this.getAccountId(
-            assigneeEmail,
-            token,
-            cloudID,
-        );
+        const { accountId } = await this.getAccountId(assigneeEmail, token);
 
-        const response = await this.http.put(
-            `${URLEnum.API_URL}${cloudID}/rest/api/3/issue/${issueKey}/assignee`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token?.accessToken}`,
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
-                content: JSON.stringify({
-                    accountId: accountId,
-                }),
-            },
+        const response = await putRequest(
+            this.http,
+            `/issue/${issueKey}/assignee`,
+            { token, body: { accountId } },
         );
-
-        if (!response.statusCode.toString().startsWith("2")) {
-            throw new Error(
-                `Failed to assign Jira issue. Status: ${response.statusCode}. ` +
-                    `Response: ${response.content || JSON.stringify(response.data)}`,
-            );
-        }
 
         return { success: true, message: "Issue assigned to user" };
     }
@@ -471,24 +409,10 @@ export class JiraSDK {
             cloudID,
         );
 
-        const response = await this.http.put(
-            `${URLEnum.API_URL}${cloudID}/rest/api/3/issue/${issueKey}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token.accessToken}`,
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
-                data: { fields },
-            },
-        );
-
-        if (!response.statusCode.toString().startsWith("2")) {
-            throw new Error(
-                `Failed to update Jira issue. Status: ${response.statusCode}. ` +
-                    `Response: ${response.content || JSON.stringify(response.data)}`,
-            );
-        }
+        const response = await putRequest(this.http, `/issue/${issueKey}`, {
+            token,
+            body: { fields },
+        });
 
         return {
             success: true,
@@ -524,20 +448,9 @@ export class JiraSDK {
         token: IJiraAuthToken,
         cloudID: string,
     ): Promise<string> {
-        const response = await this.http.get(
-            `${URLEnum.API_URL}${cloudID}/rest/api/3/priority`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token.accessToken}`,
-                    Accept: "application/json",
-                },
-            },
-        );
+        const response = await getRequest(this.http, "/priority", { token });
 
-        if (
-            !response.statusCode.toString().startsWith("2") ||
-            !Array.isArray(response.data)
-        ) {
+        if (!Array.isArray(response.data)) {
             throw new Error("Failed to fetch Jira priorities for validation.");
         }
 
@@ -610,24 +523,11 @@ export class JiraSDK {
         token: IJiraAuthToken,
         cloudID: string,
     ): Promise<{ success: boolean }> {
-        const transitionsResponse = await this.http.get(
-            `${URLEnum.API_URL}${cloudID}/rest/api/3/issue/${issueKey}/transitions`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token.accessToken}`,
-                    Accept: "application/json",
-                },
-            },
+        const transitionsResponse = await getRequest(
+            this.http,
+            `/issue/${issueKey}/transitions`,
+            { token },
         );
-
-        if (
-            !transitionsResponse.statusCode.toString().startsWith("2") ||
-            !Array.isArray(transitionsResponse.data?.transitions)
-        ) {
-            throw new Error(
-                "Failed to fetch available status transitions for this issue.",
-            );
-        }
 
         const transitions = transitionsResponse.data.transitions;
         const match = transitions.find(
@@ -645,24 +545,11 @@ export class JiraSDK {
             );
         }
 
-        const response = await this.http.post(
-            `${URLEnum.API_URL}${cloudID}/rest/api/3/issue/${issueKey}/transitions`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token.accessToken}`,
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
-                data: { transition: { id: match.id } },
-            },
+        const response = await postRequest(
+            this.http,
+            `/issue/${issueKey}/transitions`,
+            { token, body: { transition: { id: match.id } } },
         );
-
-        if (!response.statusCode.toString().startsWith("2")) {
-            throw new Error(
-                `Failed to update Jira issue status. Status: ${response.statusCode}. ` +
-                    `Response: ${response.content || JSON.stringify(response.data)}`,
-            );
-        }
 
         return {
             success: true,
@@ -682,19 +569,11 @@ export class JiraSDK {
         };
     }
 
-    private async getAccountId(
-        email: string,
-        token: IJiraAuthToken,
-        cloudID: string,
-    ) {
-        const response = await this.http.get(
-            `${URLEnum.API_URL}${cloudID}/rest/api/3/user/search?query=${encodeURIComponent(email)}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token?.accessToken}`,
-                    Accept: "application/json",
-                },
-            },
+    private async getAccountId(email: string, token: IJiraAuthToken) {
+        const response = await getRequest(
+            this.http,
+            `/user/search?query=${encodeURIComponent(email)}`,
+            { token },
         );
 
         if (response?.data?.length > 0) {
