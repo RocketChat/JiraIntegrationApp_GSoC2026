@@ -15,6 +15,8 @@ import { ConnectJiraProject } from "../modals/ConnectJiraModal";
 import { ProjectMap } from "../persistence/projectMap";
 import { IJiraProjectMap } from "../interfaces/IJiraProject";
 import { CreateIssueModal } from "../modals/CreateIssueModal";
+import { IssueDetailsModal } from "../modals/IssueDetailsModal";
+import { IssueListModal } from "../modals/IssueListModal";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
 import { getCloudURL } from "../helpers/getSettings";
 import {
@@ -48,8 +50,9 @@ export class Handler {
 \`/jira my\` -  View your assigned issues 
 \`/jira search [query]\` -  Search for Jira issues 
 \`/jira assign [issue-key] [username]\` - Assign an issue to a user 
-\`/jira share [issue-key]\` - Share an issue in the channel 
-\`/jira set [project-key]\` - Set default project for the channel 
+\`/jira share [issue-key]\` - Share an issue in the channel
+\`/jira issues [issue-key]\` - View issue details
+\`/jira set [project-key]\` - Set default project for the channel
 \`/jira subscribe\` - Subscribe to Jira notifications 
 `;
 
@@ -512,6 +515,75 @@ export class Handler {
                 this.sender,
                 this.room,
                 `Failed to update issue: ${message}`,
+            );
+        }
+    }
+
+    async issues(args: string[]): Promise<void> {
+        const issueKey = args[0];
+
+        const authPersistence = new AuthPersistence(
+            this.persistence,
+            this.read.getPersistenceReader(),
+        );
+
+        const token = await authPersistence.getAccessToken(this.sender);
+
+        if (!token) {
+            await sendNotification(
+                this.read,
+                this.modify,
+                this.sender,
+                this.room,
+                "You are not authenticated with Jira. Please run `/jira login` first.",
+            );
+            return;
+        }
+
+        try {
+            const modal = issueKey
+                ? await IssueDetailsModal({
+                      app: this.app,
+                      read: this.read,
+                      modify: this.modify,
+                      http: this.http,
+                      sender: this.sender,
+                      room: this.room,
+                      persis: this.persistence,
+                      triggerId: this.triggerId,
+                      id: this.app.getID(),
+                      issueKey,
+                  })
+                : await IssueListModal({
+                      app: this.app,
+                      read: this.read,
+                      modify: this.modify,
+                      http: this.http,
+                      sender: this.sender,
+                      room: this.room,
+                      persis: this.persistence,
+                      triggerId: this.triggerId,
+                      id: this.app.getID(),
+                  });
+
+            await this.modify
+                .getUiController()
+                .openSurfaceView(
+                    modal,
+                    { triggerId: this.triggerId },
+                    this.sender,
+                );
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred.";
+            await sendNotification(
+                this.read,
+                this.modify,
+                this.sender,
+                this.room,
+                `Failed to fetch issue${issueKey ? "" : "s"} details: ${message}`,
             );
         }
     }

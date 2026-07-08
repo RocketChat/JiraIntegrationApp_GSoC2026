@@ -16,6 +16,8 @@ import { IRoom } from "@rocket.chat/apps-engine/definition/rooms";
 import { ProjectMap } from "../persistence/projectMap";
 import { sendMessage, sendNotification } from "../helpers/message";
 import { issueCreatedMessage } from "../helpers/messageTemplates";
+import { AuthPersistence } from "../persistence/authPersistence";
+import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
 
 export class ExecuteViewSubmitHandler {
     private context: UIKitViewSubmitInteractionContext;
@@ -39,7 +41,7 @@ export class ExecuteViewSubmitHandler {
             this.read.getPersistenceReader(),
         );
 
-        const [viewId, roomId] = view.id.split("|");
+        const [viewId, roomId, issueKey] = view.id.split("|");
         const room = (await this.read.getRoomReader().getById(roomId)) as IRoom;
 
         switch (viewId) {
