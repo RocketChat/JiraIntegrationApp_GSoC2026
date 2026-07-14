@@ -44,9 +44,8 @@ export class JiraApp extends App {
         persistence: IPersistence,
         modify: IModify,
     ): Promise<void> {
-
         const user = context.user;
-        await sendDMOnInstall(read, modify, user)
+        await sendDMOnInstall(read, modify, user);
     }
 
     public async initialize(

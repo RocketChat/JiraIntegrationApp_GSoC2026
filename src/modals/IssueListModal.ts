@@ -17,7 +17,6 @@ import { ProjectMap } from "../persistence/projectMap";
 import { LayoutBlock, SectionBlock } from "@rocket.chat/ui-kit";
 import { ElementEnum } from "../enums/ElementEnum";
 
-
 export async function IssueListModal({
     app,
     read,
@@ -58,15 +57,13 @@ export async function IssueListModal({
         );
     }
 
-    const issues = await app
-        .getJiraSDK()
-        .searchIssues(
-            token,
-            read,
-            sender,
-            persis,
-            `project = ${project.projectKey} ORDER BY updated DESC`,    // JQL Query - Jira Query Language
-        );
+    const issues = await app.getJiraSDK().searchIssues(
+        token,
+        read,
+        sender,
+        persis,
+        `project = ${project.projectKey} ORDER BY updated DESC`, // JQL Query - Jira Query Language
+    );
 
     const blocks: LayoutBlock[] = issues.length
         ? buildIssueListBlocks(issues, id)
@@ -138,4 +135,3 @@ function buildIssueListBlocks(
 
     return blocks;
 }
-

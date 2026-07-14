@@ -2,7 +2,6 @@
 
 This guide is for Post installation of this app.
 
-
 ### Enabling OAuth 2.0 3LO
 
 Before you can implement OAuth 2.0 (3LO) for your app, you need to enable it for your app using the [developer console.](https://developer.atlassian.com/console/myapps/)
@@ -20,6 +19,7 @@ Before you can implement OAuth 2.0 (3LO) for your app, you need to enable it for
 2. Next to the API you want to add, select Add.
 
 **Following Permissions are necessary**
+
 1. read:me
 2. read:account
 3. read:jira-work
