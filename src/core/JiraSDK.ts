@@ -255,6 +255,7 @@ export class JiraSDK {
             issueType: fields.issuetype?.name,
             priority: fields.priority?.name,
             status: fields.status?.name,
+            assigneeName: fields.assignee?.displayName,
         };
 
         if (fields.description) {
@@ -266,6 +267,45 @@ export class JiraSDK {
         }
 
         return issue;
+    }
+
+    public async searchIssues(
+        token: IJiraAuthToken,
+        read: IRead,
+        user: IUser,
+        persis: IPersistence,
+        jql: string,
+    ): Promise<
+        Array<{
+            key: string;
+            summary: string;
+            status?: string;
+            priority?: string;
+        }>
+    > {
+        if (this.isTokenExpired(token)) {
+            token = await this.refreshAccessToken(
+                read,
+                user,
+                this.http,
+                persis,
+            );
+        }
+
+        const response = await getRequest(
+            this.http,
+            `/search/jql?jql=${encodeURIComponent(jql)}&fields=summary,status,priority`,
+            { token },
+        );
+
+        const issues = response.data.issues || [];
+
+        return issues.map((issue: any) => ({
+            key: issue.key,
+            summary: issue.fields?.summary,
+            status: issue.fields?.status?.name,
+            priority: issue.fields?.priority?.name,
+        }));
     }
 
     // Added this because Jira api returns `description` in Atlassian Document Format

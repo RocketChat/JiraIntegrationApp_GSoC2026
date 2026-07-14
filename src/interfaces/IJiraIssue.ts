@@ -6,6 +6,7 @@ export interface IJiraIssue {
     issueType: string;
     description?: string;
     assignee?: IUser;
+    assigneeName?: string;
     priority?: string;
     status?: string;
     deadline?: Date;

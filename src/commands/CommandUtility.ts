@@ -63,6 +63,7 @@ export class CommandUtility implements ICommandUtility {
             assign: (args) => handler.assign(args),
             share: (args) => handler.share(args),
             set: (args) => handler.setCommands(args),
+            issues: (args) => handler.issues(args),
             subscribe: (args) => handler.subscribe(args),
             cancel: () => handler.cancel(),
             connect: () => handler.connect(),
