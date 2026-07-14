@@ -7,6 +7,7 @@ import {
     IModify,
     IPersistence,
     IRead,
+    IAppInstallationContext,
 } from "@rocket.chat/apps-engine/definition/accessors";
 import { App } from "@rocket.chat/apps-engine/definition/App";
 import { IAppInfo } from "@rocket.chat/apps-engine/definition/metadata";
@@ -14,10 +15,18 @@ import { settings } from "./src/settings/settings";
 import { JiraCommand } from "./src/commands/JiraCommand";
 import { JiraSDK } from "./src/core/JiraSDK";
 import { CallbackEndpoint } from "./src/api/callback";
-import { ApiVisibility, ApiSecurity } from "@rocket.chat/apps-engine/definition/api";
-import { UIKitViewSubmitInteractionContext, UIKitBlockInteractionContext, IUIKitResponse } from "@rocket.chat/apps-engine/definition/uikit";
+import {
+    ApiVisibility,
+    ApiSecurity,
+} from "@rocket.chat/apps-engine/definition/api";
+import {
+    UIKitViewSubmitInteractionContext,
+    UIKitBlockInteractionContext,
+    IUIKitResponse,
+} from "@rocket.chat/apps-engine/definition/uikit";
 import { ExecuteViewSubmitHandler } from "./src/handlers/ExecuteViewSubmitHandler";
 import { ExecuteBlockActionHandler } from "./src/handlers/ExecuteBlockActionHandler";
+import { sendDMOnInstall } from "./src/helpers/message";
 
 export class JiraApp extends App {
     constructor(info: IAppInfo, logger: ILogger, accessors: IAppAccessors) {
@@ -26,6 +35,18 @@ export class JiraApp extends App {
 
     public getJiraSDK(): JiraSDK {
         return new JiraSDK(this, this.getAccessors().http);
+    }
+
+    public async onInstall(
+        context: IAppInstallationContext,
+        read: IRead,
+        http: IHttp,
+        persistence: IPersistence,
+        modify: IModify,
+    ): Promise<void> {
+
+        const user = context.user;
+        await sendDMOnInstall(read, modify, user)
     }
 
     public async initialize(
