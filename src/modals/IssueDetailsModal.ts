@@ -15,10 +15,7 @@ import { ElementEnum } from "../enums/ElementEnum";
 import { TextTypes } from "../enums/TextTypes";
 import { ModalEnum } from "../enums/ModalEnum";
 import { getCloudURL } from "../helpers/getSettings";
-import {
-    LayoutBlock,
-    SectionBlock,
-} from "@rocket.chat/ui-kit";
+import { InputBlock, LayoutBlock, SectionBlock } from "@rocket.chat/ui-kit";
 
 export async function IssueDetailsModal({
     app,
@@ -54,6 +51,10 @@ export async function IssueDetailsModal({
     const issue = await app
         .getJiraSDK()
         .getJiraIssue(token, read, sender, persis, issueKey);
+
+    const comments = await app
+        .getJiraSDK()
+        .getComments(token, read, sender, persis, issueKey);
 
     const siteURL = await getCloudURL(read);
     const issueURL = `${siteURL}/browse/${issueKey}`;
@@ -107,11 +108,61 @@ export async function IssueDetailsModal({
         },
     };
 
+    const commentsHeaderSection: SectionBlock = {
+        type: "section",
+        text: {
+            type: TextTypes.MARKDOWN,
+            text: `*Comments (${comments.length})*`,
+        },
+    };
+
+    const commentSections: SectionBlock[] = comments.length
+        ? comments.map((comment) => ({
+              type: "section",
+              text: {
+                  type: TextTypes.MARKDOWN,
+                  text: `*${comment.author}* · ${comment.created.toDateString()}\n${comment.body}`,
+              },
+          }))
+        : [
+              {
+                  type: "section",
+                  text: {
+                      type: TextTypes.MARKDOWN,
+                      text: "_No comments yet._",
+                  },
+              },
+          ];
+
+    const commentInput: InputBlock = {
+        type: "input",
+        blockId: ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_BLOCK,
+        label: {
+            type: TextTypes.PLAIN_TEXT,
+            text: "Add a comment",
+        },
+        element: {
+            type: "plain_text_input",
+            placeholder: {
+                type: TextTypes.PLAIN_TEXT,
+                text: "Write a comment...",
+            },
+            appId: id,
+            blockId: ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_BLOCK,
+            actionId: ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_ACTION,
+        },
+    };
+
     const blocks: LayoutBlock[] = [
         summarySection,
         detailsSection,
         { type: "divider" },
         descriptionSection,
+        { type: "divider" },
+        commentInput,
+        { type: "divider" },
+        commentsHeaderSection,
+        ...commentSections,
     ];
 
     return {
@@ -122,6 +173,16 @@ export async function IssueDetailsModal({
             text: `Issue ${issueKey}`,
         },
         blocks,
+        submit: {
+            type: "button",
+            text: {
+                type: TextTypes.PLAIN_TEXT,
+                text: "Post Comment",
+            },
+            blockId: ElementEnum.JIRA_ISSUE_DETAILS_SUBMIT_BLOCK,
+            actionId: ElementEnum.JIRA_ISSUE_DETAILS_SUBMIT_ACTION,
+            appId: id,
+        },
         clearOnClose: true,
         close: {
             type: "button",

@@ -17,3 +17,10 @@ export interface IJiraIssueResponse {
     key: string;
     issueURL: string;
 }
+
+export interface IJiraComment {
+    id: string;
+    author: string;
+    body: string;
+    created: Date;
+}

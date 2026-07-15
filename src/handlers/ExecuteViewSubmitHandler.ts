@@ -18,6 +18,7 @@ import { sendMessage, sendNotification } from "../helpers/message";
 import { issueCreatedMessage } from "../helpers/messageTemplates";
 import { AuthPersistence } from "../persistence/authPersistence";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
+import { IssueDetailsModal } from "../modals/IssueDetailsModal";
 
 export class ExecuteViewSubmitHandler {
     private context: UIKitViewSubmitInteractionContext;
@@ -34,7 +35,7 @@ export class ExecuteViewSubmitHandler {
     }
 
     public async execute(): Promise<IUIKitResponse | IUIKitModalResponse> {
-        const { view, user } = this.context.getInteractionData();
+        const { view, user, triggerId } = this.context.getInteractionData();
 
         const projectMap = new ProjectMap(
             this.persistence,
@@ -140,6 +141,64 @@ export class ExecuteViewSubmitHandler {
                         user,
                         room,
                         `Failed to create issue: ${message}`,
+                    );
+                }
+
+                break;
+            }
+            case ModalEnum.JIRA_ISSUE_DETAILS_MODAL: {
+                const commentText =
+                    view.state?.[
+                        ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_BLOCK
+                    ]?.[ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_ACTION];
+
+                try {
+                    const authPersistence = new AuthPersistence(
+                        this.persistence,
+                        this.read.getPersistenceReader(),
+                    );
+                    const token = (await authPersistence.getAccessToken(
+                        user,
+                    )) as IJiraAuthToken;
+
+                    await this.app
+                        .getJiraSDK()
+                        .addComment(
+                            token,
+                            this.read,
+                            user,
+                            this.persistence,
+                            issueKey,
+                            commentText,
+                        );
+
+                    const updatedModal = await IssueDetailsModal({
+                        app: this.app,
+                        read: this.read,
+                        modify: this.modify,
+                        http: this.http,
+                        sender: user,
+                        room,
+                        persis: this.persistence,
+                        triggerId,
+                        id: this.app.getID(),
+                        issueKey,
+                    });
+
+                    return this.context
+                        .getInteractionResponder()
+                        .updateModalViewResponse(updatedModal);
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Failed to add comment: ${message}`,
                     );
                 }
 
