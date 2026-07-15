@@ -14,11 +14,16 @@ import { ModalEnum } from "../enums/ModalEnum";
 import { ElementEnum } from "../enums/ElementEnum";
 import { IRoom } from "@rocket.chat/apps-engine/definition/rooms";
 import { ProjectMap } from "../persistence/projectMap";
-import { sendMessage, sendNotification } from "../helpers/message";
-import { issueCreatedMessage } from "../helpers/messageTemplates";
+import { getDirect, sendMessage, sendNotification } from "../helpers/message";
+import {
+    issueCreatedMessage,
+    issueSharedMessage,
+} from "../helpers/messageTemplates";
 import { AuthPersistence } from "../persistence/authPersistence";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
 import { IssueDetailsModal } from "../modals/IssueDetailsModal";
+import { getCloudURL } from "../helpers/getSettings";
+import { IUser } from "@rocket.chat/apps-engine/definition/users";
 
 export class ExecuteViewSubmitHandler {
     private context: UIKitViewSubmitInteractionContext;
@@ -199,6 +204,134 @@ export class ExecuteViewSubmitHandler {
                         user,
                         room,
                         `Failed to add comment: ${message}`,
+                    );
+                }
+
+                break;
+            }
+            case ModalEnum.JIRA_SHARE_ISSUE_MODAL: {
+                const channelIds: string[] | undefined =
+                    view.state?.[ElementEnum.JIRA_ISSUE_SHARE_CHANNELS_BLOCK]?.[
+                        ElementEnum.JIRA_ISSUE_SHARE_CHANNELS_ACTION
+                    ];
+                const usernames: string[] | undefined =
+                    view.state?.[ElementEnum.JIRA_ISSUE_SHARE_USERS_BLOCK]?.[
+                        ElementEnum.JIRA_ISSUE_SHARE_USERS_ACTION
+                    ];
+
+                try {
+                    const authPersistence = new AuthPersistence(
+                        this.persistence,
+                        this.read.getPersistenceReader(),
+                    );
+                    const token = (await authPersistence.getAccessToken(
+                        user,
+                    )) as IJiraAuthToken;
+
+                    const issue = await this.app
+                        .getJiraSDK()
+                        .getJiraIssue(
+                            token,
+                            this.read,
+                            user,
+                            this.persistence,
+                            issueKey,
+                        );
+
+                    const siteURL = await getCloudURL(this.read);
+                    const issueURL = `${siteURL}/browse/${issueKey}`;
+                    const appUser = (await this.read
+                        .getUserReader()
+                        .getAppUser()) as IUser;
+
+                    let sharedCount = 0;
+
+                    if (channelIds?.length) {
+                        for (const channelId of channelIds) {
+                            const targetRoom = await this.read
+                                .getRoomReader()
+                                .getById(channelId);
+
+                            if (!targetRoom) continue;
+
+                            await sendMessage(
+                                this.read,
+                                this.modify,
+                                targetRoom,
+                                user,
+                                issueSharedMessage({
+                                    sharedByName: user.username,
+                                    issueKey,
+                                    summary: issue.summary,
+                                    issueType: issue.issueType,
+                                    description: issue.description,
+                                    priority: issue.priority,
+                                    deadline: issue.deadline,
+                                    issueURL,
+                                    isDirect: false,
+                                }),
+                            );
+                        }
+                    }
+
+                    if (usernames?.length) {
+                        for (const username of usernames) {
+                            const targetUser = await this.read
+                                .getUserReader()
+                                .getByUsername(username);
+
+                            if (!targetUser) continue;
+
+                            const dmRoom = await getDirect(
+                                this.read,
+                                this.modify,
+                                appUser,
+                                targetUser.username,
+                            );
+
+                            if (!dmRoom) continue;
+
+                            await sendMessage(
+                                this.read,
+                                this.modify,
+                                dmRoom,
+                                user,
+                                issueSharedMessage({
+                                    sharedByName: user.username,
+                                    issueKey,
+                                    summary: issue.summary,
+                                    issueType: issue.issueType,
+                                    description: issue.description,
+                                    priority: issue.priority,
+                                    deadline: issue.deadline,
+                                    issueURL,
+                                    isDirect: true,
+                                }),
+                            );
+                            sharedCount++;
+                        }
+                    }
+
+                    if (sharedCount === 0) {
+                        await sendNotification(
+                            this.read,
+                            this.modify,
+                            user,
+                            room,
+                            "Please select at least one channel or user to share this issue with.",
+                        );
+                    }
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Failed to share issue: ${message}`,
                     );
                 }
 

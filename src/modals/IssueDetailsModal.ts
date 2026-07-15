@@ -76,17 +76,35 @@ export async function IssueDetailsModal({
             type: TextTypes.MARKDOWN,
             text: `*${issue.summary}*\n${issueKey} · ${issue.issueType}`,
         },
-        accessory: {
-            type: "button",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Open in Jira",
+    };
+
+    const issueActionsBlock: ActionsBlock = {
+        type: "actions",
+        blockId: ElementEnum.JIRA_ISSUE_DETAILS_OPEN_BLOCK,
+        elements: [
+            {
+                type: "button",
+                text: {
+                    type: TextTypes.PLAIN_TEXT,
+                    text: "Open in Jira",
+                },
+                url: issueURL,
+                appId: id,
+                blockId: ElementEnum.JIRA_ISSUE_DETAILS_OPEN_BLOCK,
+                actionId: ElementEnum.JIRA_ISSUE_DETAILS_OPEN_ACTION,
             },
-            url: issueURL,
-            appId: id,
-            blockId: ElementEnum.JIRA_ISSUE_DETAILS_OPEN_BLOCK,
-            actionId: ElementEnum.JIRA_ISSUE_DETAILS_OPEN_ACTION,
-        },
+            {
+                type: "button",
+                text: {
+                    type: TextTypes.PLAIN_TEXT,
+                    text: "Share Issue",
+                },
+                value: issueKey,
+                appId: id,
+                blockId: ElementEnum.JIRA_ISSUE_DETAILS_SHARE_BLOCK,
+                actionId: ElementEnum.JIRA_ISSUE_DETAILS_SHARE_ACTION,
+            },
+        ],
     };
 
     const detailsSection: SectionBlock = {
@@ -191,6 +209,7 @@ export async function IssueDetailsModal({
         { type: "divider" },
         descriptionSection,
         { type: "divider" },
+        issueActionsBlock,
         commentInput,
         { type: "divider" },
         commentsHeaderSection,

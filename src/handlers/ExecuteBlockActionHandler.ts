@@ -3,6 +3,7 @@ import {
     IHttp,
     IPersistence,
     IModify,
+    IUIKitSurfaceViewParam,
 } from "@rocket.chat/apps-engine/definition/accessors";
 import {
     IUIKitModalResponse,
@@ -18,6 +19,7 @@ import { AuthPersistence } from "../persistence/authPersistence";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
 import { getCloudURL } from "../helpers/getSettings";
 import { IssueDetailsModal } from "../modals/IssueDetailsModal";
+import { ShareIssueModal } from "../modals/ShareIssueModal";
 
 export class ExecuteBlockActionHandler {
     private context: UIKitBlockInteractionContext;
@@ -128,8 +130,89 @@ export class ExecuteBlockActionHandler {
 
                 break;
             }
-        }
+            case ElementEnum.JIRA_ISSUE_DETAILS_SHARE_ACTION: {
+                const issueKey = value;
 
-        return { success: true}
+                if (!issueKey || !room) {
+                    break;
+                }
+
+                try {
+                    const modal = await ShareIssueModal({
+                        app: this.app,
+                        read: this.read,
+                        modify: this.modify,
+                        http: this.http,
+                        sender: user,
+                        room,
+                        persis: this.persistence,
+                        triggerId,
+                        id: this.app.getID(),
+                        shareTo: "user",
+                        issueKey,
+                    });
+
+                    await this.modify
+                        .getUiController()
+                        .openSurfaceView(modal, { triggerId }, user);
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Failed to load issue details: ${message}`,
+                    );
+                }
+
+                break;
+            }
+
+            case ElementEnum.JIRA_ISSUE_SHARE_TO_ACTION: {
+                try {
+                    const { issueKey, shareTo } = JSON.parse(value as string);
+                    const otherTarget = shareTo === "user" ? "channel" : "user";
+                    let modal = await ShareIssueModal({
+                        app: this.app,
+                        read: this.read,
+                        modify: this.modify,
+                        http: this.http,
+                        sender: user,
+                        room,
+                        persis: this.persistence,
+                        triggerId,
+                        id: this.app.getID(),
+                        shareTo: otherTarget,
+                        issueKey,
+                    });
+
+                    await this.modify
+                        .getUiController()
+                        .updateSurfaceView(
+                            modal,
+                            { triggerId: triggerId },
+                            user,
+                        );
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room as IRoom,
+                        `Failed to load issue details: ${message}`,
+                    );
+                }
+                break;
+            }
+        }
+        return { success: true };
     }
 }
