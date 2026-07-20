@@ -5,6 +5,7 @@ import {
     IModify,
 } from "@rocket.chat/apps-engine/definition/accessors";
 import {
+    IUIKitModalResponse,
     IUIKitResponse,
     UIKitBlockInteractionContext,
 } from "@rocket.chat/apps-engine/definition/uikit";
@@ -32,11 +33,11 @@ export class ExecuteBlockActionHandler {
         this.context = context;
     }
 
-    public async execute(): Promise<IUIKitResponse> {
+    public async execute(): Promise<IUIKitResponse | IUIKitModalResponse> {
         const { actionId, user, value, container, triggerId } =
             this.context.getInteractionData();
 
-        const [, roomIdFromView] = container.id.split("|");
+        const [, roomIdFromView, issueKeyFromView] = container.id.split("|");
 
         const room =
             this.context.getInteractionData().room ??
@@ -80,6 +81,48 @@ export class ExecuteBlockActionHandler {
                         user,
                         room,
                         `Failed to load issue details: ${message}`,
+                    );
+                }
+
+                break;
+            }
+            case ElementEnum.JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_ACTION: {
+                const issueKey = issueKeyFromView;
+                const commentsLimit = Number(value) || 3;
+
+                if (!issueKey || !room) {
+                    break;
+                }
+
+                try {
+                    const updatedModal = await IssueDetailsModal({
+                        app: this.app,
+                        read: this.read,
+                        modify: this.modify,
+                        http: this.http,
+                        sender: user,
+                        room,
+                        persis: this.persistence,
+                        triggerId,
+                        id: this.app.getID(),
+                        issueKey,
+                        commentsLimit,
+                    });
+
+                    return this.context
+                        .getInteractionResponder()
+                        .updateModalViewResponse(updatedModal);
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Failed to load more comments: ${message}`,
                     );
                 }
 

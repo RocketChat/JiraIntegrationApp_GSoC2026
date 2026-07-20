@@ -11,6 +11,7 @@ import { getCloudURL, getCredentials } from "../helpers/getSettings";
 import { AuthPersistence } from "../persistence/authPersistence";
 import {
     IJiraComment,
+    IJiraCommentsResponse,
     IJiraIssue,
     IJiraIssueResponse,
 } from "../interfaces/IJiraIssue";
@@ -279,7 +280,9 @@ export class JiraSDK {
         user: IUser,
         persis: IPersistence,
         issueKey: string,
-    ): Promise<IJiraComment[]> {
+        startAt: number = 0,
+        maxResults: number = 3,
+    ): Promise<IJiraCommentsResponse> {
         if (this.isTokenExpired(token)) {
             token = await this.refreshAccessToken(
                 read,
@@ -291,18 +294,21 @@ export class JiraSDK {
 
         const response = await getRequest(
             this.http,
-            `/issue/${issueKey}/comment`,
+            `/issue/${issueKey}/comment?startAt=${startAt}&maxResults=${maxResults}&orderBy=-created`,
             { token },
         );
 
         const comments = response.data.comments || [];
 
-        return comments.map((comment: any) => ({
-            id: comment.id,
-            author: comment.author?.displayName || "Unknown",
-            body: this.extractTextFromADF(comment.body),
-            created: new Date(comment.created),
-        }));
+        return {
+            comments: comments.map((comment: any) => ({
+                id: comment.id,
+                author: comment.author?.displayName || "Unknown",
+                body: this.extractTextFromADF(comment.body),
+                created: new Date(comment.created),
+            })),
+            total: response.data.total ?? comments.length,
+        };
     }
 
     public async addComment(

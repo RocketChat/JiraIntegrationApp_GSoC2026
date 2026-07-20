@@ -29,4 +29,6 @@ export enum ElementEnum {
     JIRA_ISSUE_DETAILS_SUBMIT_BLOCK = "jira-issue-details-submit-block",
     JIRA_ISSUE_LIST_VIEW_DETAILS_ACTION = "jira-issue-list-view-details-action",
     JIRA_ISSUE_LIST_VIEW_DETAILS_BLOCK = "jira-issue-list-view-details-block",
+    JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_ACTION = "jira-issue-details-load-more-comments-action",
+    JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_BLOCK = "jira-issue-details-load-more-comments-block",
 }

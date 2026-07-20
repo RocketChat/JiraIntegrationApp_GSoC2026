@@ -15,7 +15,14 @@ import { ElementEnum } from "../enums/ElementEnum";
 import { TextTypes } from "../enums/TextTypes";
 import { ModalEnum } from "../enums/ModalEnum";
 import { getCloudURL } from "../helpers/getSettings";
-import { InputBlock, LayoutBlock, SectionBlock } from "@rocket.chat/ui-kit";
+import {
+    ActionsBlock,
+    InputBlock,
+    LayoutBlock,
+    SectionBlock,
+} from "@rocket.chat/ui-kit";
+
+const COMMENTS_PAGE_SIZE = 3;
 
 export async function IssueDetailsModal({
     app,
@@ -28,6 +35,7 @@ export async function IssueDetailsModal({
     triggerId: _triggerId,
     id,
     issueKey,
+    commentsLimit = COMMENTS_PAGE_SIZE,
 }: {
     app: JiraApp;
     read: IRead;
@@ -39,6 +47,7 @@ export async function IssueDetailsModal({
     triggerId: string | undefined;
     id: string;
     issueKey: string;
+    commentsLimit?: number;
 }): Promise<IUIKitSurfaceViewParam> {
     const authPersistence = new AuthPersistence(
         persis,
@@ -52,9 +61,11 @@ export async function IssueDetailsModal({
         .getJiraSDK()
         .getJiraIssue(token, read, sender, persis, issueKey);
 
-    const comments = await app
+    const { comments, total: totalComments } = await app
         .getJiraSDK()
-        .getComments(token, read, sender, persis, issueKey);
+        .getComments(token, read, sender, persis, issueKey, 0, commentsLimit);
+
+    const hasMoreComments = totalComments > comments.length;
 
     const siteURL = await getCloudURL(read);
     const issueURL = `${siteURL}/browse/${issueKey}`;
@@ -112,7 +123,7 @@ export async function IssueDetailsModal({
         type: "section",
         text: {
             type: TextTypes.MARKDOWN,
-            text: `*Comments (${comments.length})*`,
+            text: `*Comments (${totalComments})*`,
         },
     };
 
@@ -133,6 +144,27 @@ export async function IssueDetailsModal({
                   },
               },
           ];
+
+    const loadMoreCommentsBlock: ActionsBlock | undefined = hasMoreComments
+        ? {
+              type: "actions",
+              blockId: ElementEnum.JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_BLOCK,
+              elements: [
+                  {
+                      type: "button",
+                      text: {
+                          type: TextTypes.PLAIN_TEXT,
+                          text: "Load more Comments",
+                      },
+                      appId: id,
+                      blockId: ElementEnum.JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_BLOCK,
+                      actionId:
+                          ElementEnum.JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_ACTION,
+                      value: String(commentsLimit + COMMENTS_PAGE_SIZE),
+                  },
+              ],
+          }
+        : undefined;
 
     const commentInput: InputBlock = {
         type: "input",
@@ -163,6 +195,7 @@ export async function IssueDetailsModal({
         { type: "divider" },
         commentsHeaderSection,
         ...commentSections,
+        ...(loadMoreCommentsBlock ? [loadMoreCommentsBlock] : []),
     ];
 
     return {

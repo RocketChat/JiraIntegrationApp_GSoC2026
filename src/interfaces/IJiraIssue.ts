@@ -24,3 +24,8 @@ export interface IJiraComment {
     body: string;
     created: Date;
 }
+
+export interface IJiraCommentsResponse {
+    comments: IJiraComment[];
+    total: number;
+}
