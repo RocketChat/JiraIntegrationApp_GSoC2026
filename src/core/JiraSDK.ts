@@ -455,6 +455,32 @@ export class JiraSDK {
         return { success: true, message: "Issue assigned to user" };
     }
 
+    public async setIssueDeadline(
+        read: IRead,
+        persis: IPersistence,
+        sender: IUser,
+        token: IJiraAuthToken,
+        deadlineData: { issueKey: string; deadline: Date },
+    ): Promise<{ success: boolean }> {
+        const { issueKey, deadline } = deadlineData;
+
+        if (this.isTokenExpired(token)) {
+            token = await this.refreshAccessToken(
+                read,
+                sender,
+                this.http,
+                persis,
+            );
+        }
+
+        await putRequest(this.http, `/issue/${issueKey}`, {
+            token,
+            body: { fields: { duedate: deadline.toISOString().split("T")[0] } },
+        });
+
+        return { success: true };
+    }
+
     public async updateIssueDetails(
         read: IRead,
         persis: IPersistence,
