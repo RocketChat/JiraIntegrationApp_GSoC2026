@@ -37,4 +37,13 @@ export enum ElementEnum {
     JIRA_ISSUE_SHARE_CHANNELS_BLOCK = "jira-issue-share-channels-block",
     JIRA_ISSUE_SHARE_USERS_ACTION = "jira-issue-share-users-action",
     JIRA_ISSUE_SHARE_USERS_BLOCK = "jira-issue-share-users-block",
+    JIRA_ISSUE_CREATED_ACTIONS_BLOCK = "jira-issue-created-actions-block",
+    JIRA_ISSUE_CREATED_ASSIGN_ACTION = "jira-issue-created-assign-action",
+    JIRA_ISSUE_CREATED_ASSIGN_BLOCK = "jira-issue-created-assign-block",
+    JIRA_ISSUE_CREATED_SET_DEADLINE_ACTION = "jira-issue-created-set-deadline-action",
+    JIRA_ISSUE_CREATED_SET_DEADLINE_BLOCK = "jira-issue-created-set-deadline-block",
+    JIRA_ASSIGN_ISSUE_USER_ACTION = "jira-assign-issue-user-action",
+    JIRA_ASSIGN_ISSUE_USER_BLOCK = "jira-assign-issue-user-block",
+    JIRA_SET_DEADLINE_DATE_ACTION = "jira-set-deadline-date-action",
+    JIRA_SET_DEADLINE_DATE_BLOCK = "jira-set-deadline-date-block",
 }

@@ -14,10 +14,17 @@ import { ModalEnum } from "../enums/ModalEnum";
 import { ElementEnum } from "../enums/ElementEnum";
 import { IRoom } from "@rocket.chat/apps-engine/definition/rooms";
 import { ProjectMap } from "../persistence/projectMap";
-import { getDirect, sendMessage, sendNotification } from "../helpers/message";
+import {
+    getDirect,
+    sendDM,
+    sendMessage,
+    sendNotification,
+} from "../helpers/message";
 import {
     issueCreatedMessage,
     issueSharedMessage,
+    issueCreatedAttachment,
+    issueQuickActionsBlock,
 } from "../helpers/messageTemplates";
 import { AuthPersistence } from "../persistence/authPersistence";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
@@ -120,20 +127,39 @@ export class ExecuteViewSubmitHandler {
                             deadline,
                         });
 
+                    const createdMessageText = issueCreatedMessage({
+                        key: created.key,
+                        summary,
+                        description,
+                        assigneeUsername: assignee?.username,
+                        deadline: deadlineStr,
+                        raisedByUsername: user.username,
+                        issueURL: created.issueURL,
+                    });
+
                     await sendMessage(
                         this.read,
                         this.modify,
                         room,
                         user,
-                        issueCreatedMessage({
-                            key: created.key,
-                            summary,
-                            description,
-                            assigneeUsername: assignee?.username,
-                            deadline: deadlineStr,
-                            raisedByUsername: user.username,
-                            issueURL: created.issueURL,
+                        createdMessageText,
+                        issueQuickActionsBlock({
+                            appId: this.app.getID(),
+                            issueKey: created.key,
+                            hasAssignee: !!assignee,
+                            hasDeadline: !!deadline,
                         }),
+                        [
+                            issueCreatedAttachment({
+                                key: created.key,
+                                summary,
+                                description,
+                                issueType,
+                                priority,
+                                assigneeUsername: assignee?.username,
+                                issueURL: created.issueURL,
+                            }),
+                        ],
                     );
                 } catch (error) {
                     const message =
@@ -332,6 +358,136 @@ export class ExecuteViewSubmitHandler {
                         user,
                         room,
                         `Failed to share issue: ${message}`,
+                    );
+                }
+
+                break;
+            }
+            case ModalEnum.JIRA_ASSIGN_ISSUE_MODAL: {
+                const username =
+                    view.state?.[ElementEnum.JIRA_ASSIGN_ISSUE_USER_BLOCK]?.[
+                        ElementEnum.JIRA_ASSIGN_ISSUE_USER_ACTION
+                    ];
+
+                if (!username) {
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        "Please select a user to assign this issue to.",
+                    );
+                    break;
+                }
+
+                try {
+                    const authPersistence = new AuthPersistence(
+                        this.persistence,
+                        this.read.getPersistenceReader(),
+                    );
+                    const token = (await authPersistence.getAccessToken(
+                        user,
+                    )) as IJiraAuthToken;
+
+                    await this.app
+                        .getJiraSDK()
+                        .assignIssue(this.read, this.persistence, user, token, {
+                            issueKey,
+                            username,
+                        });
+
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Issue **${issueKey}** has been assigned to @${username}.`,
+                    );
+
+                    const assignee = await this.read
+                        .getUserReader()
+                        .getByUsername(username);
+
+                    if (assignee) {
+                        await sendDM(
+                            this.read,
+                            this.modify,
+                            assignee,
+                            `You have been assigned to Jira issue **${issueKey}** by @${user.username}.`,
+                        );
+                    }
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Failed to assign issue: ${message}`,
+                    );
+                }
+
+                break;
+            }
+            case ModalEnum.JIRA_SET_DEADLINE_MODAL: {
+                const dateStr =
+                    view.state?.[ElementEnum.JIRA_SET_DEADLINE_DATE_BLOCK]?.[
+                        ElementEnum.JIRA_SET_DEADLINE_DATE_ACTION
+                    ];
+
+                if (!dateStr) {
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        "Please select a deadline date.",
+                    );
+                    break;
+                }
+
+                try {
+                    const authPersistence = new AuthPersistence(
+                        this.persistence,
+                        this.read.getPersistenceReader(),
+                    );
+                    const token = (await authPersistence.getAccessToken(
+                        user,
+                    )) as IJiraAuthToken;
+
+                    const deadline = new Date(dateStr);
+
+                    await this.app
+                        .getJiraSDK()
+                        .setIssueDeadline(
+                            this.read,
+                            this.persistence,
+                            user,
+                            token,
+                            { issueKey, deadline },
+                        );
+
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Deadline for issue **${issueKey}** has been set to ${deadline.toDateString()}.`,
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Failed to set deadline: ${message}`,
                     );
                 }
 
