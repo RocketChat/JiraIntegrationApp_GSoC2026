@@ -9,7 +9,12 @@ import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { getCallbackURL } from "../helpers/getEndpointURLS";
 import { getCloudURL, getCredentials } from "../helpers/getSettings";
 import { AuthPersistence } from "../persistence/authPersistence";
-import { IJiraIssue, IJiraIssueResponse } from "../interfaces/IJiraIssue";
+import {
+    IJiraComment,
+    IJiraCommentsResponse,
+    IJiraIssue,
+    IJiraIssueResponse,
+} from "../interfaces/IJiraIssue";
 import { IJiraProject } from "../interfaces/IJiraProject";
 import { sendDMNotification } from "../helpers/message";
 import { URLEnum } from "../enums/URLEnum";
@@ -267,6 +272,66 @@ export class JiraSDK {
         }
 
         return issue;
+    }
+
+    public async getComments(
+        token: IJiraAuthToken,
+        read: IRead,
+        user: IUser,
+        persis: IPersistence,
+        issueKey: string,
+        startAt: number = 0,
+        maxResults: number = 3,
+    ): Promise<IJiraCommentsResponse> {
+        if (this.isTokenExpired(token)) {
+            token = await this.refreshAccessToken(
+                read,
+                user,
+                this.http,
+                persis,
+            );
+        }
+
+        const response = await getRequest(
+            this.http,
+            `/issue/${issueKey}/comment?startAt=${startAt}&maxResults=${maxResults}&orderBy=-created`,
+            { token },
+        );
+
+        const comments = response.data.comments || [];
+
+        return {
+            comments: comments.map((comment: any) => ({
+                id: comment.id,
+                author: comment.author?.displayName || "Unknown",
+                body: this.extractTextFromADF(comment.body),
+                created: new Date(comment.created),
+            })),
+            total: response.data.total ?? comments.length,
+        };
+    }
+
+    public async addComment(
+        token: IJiraAuthToken,
+        read: IRead,
+        user: IUser,
+        persis: IPersistence,
+        issueKey: string,
+        body: string,
+    ): Promise<void> {
+        if (this.isTokenExpired(token)) {
+            token = await this.refreshAccessToken(
+                read,
+                user,
+                this.http,
+                persis,
+            );
+        }
+
+        await postRequest(this.http, `/issue/${issueKey}/comment`, {
+            token,
+            body: { body: this.buildDescriptionADF(body) },
+        });
     }
 
     public async searchIssues(
