@@ -23,6 +23,8 @@ import {
     issueCreatedMessage,
     issueSharedMessage,
     issueUpdateMessage,
+    issueCreatedAttachment,
+    issueQuickActionsBlock,
 } from "../helpers/messageTemplates";
 
 export class Handler {
@@ -142,17 +144,33 @@ export class Handler {
                     { projectKey: project.projectKey, summary, issueType },
                 );
 
+                const createdMessageText = issueCreatedMessage({
+                    key: created.key,
+                    summary,
+                    raisedByUsername: this.sender.username,
+                    issueURL: created.issueURL,
+                });
+
                 await sendMessage(
                     this.read,
                     this.modify,
                     this.room,
                     this.sender,
-                    issueCreatedMessage({
-                        key: created.key,
-                        summary,
-                        raisedByUsername: this.sender.username,
-                        issueURL: created.issueURL,
+                    createdMessageText,
+                    issueQuickActionsBlock({
+                        appId: this.app.getID(),
+                        issueKey: created.key,
+                        hasAssignee: false,
+                        hasDeadline: false,
                     }),
+                    [
+                        issueCreatedAttachment({
+                            key: created.key,
+                            summary,
+                            issueType,
+                            issueURL: created.issueURL,
+                        }),
+                    ],
                 );
             } catch (error) {
                 const message =

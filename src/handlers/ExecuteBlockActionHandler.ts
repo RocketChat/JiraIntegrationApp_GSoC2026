@@ -20,6 +20,8 @@ import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
 import { getCloudURL } from "../helpers/getSettings";
 import { IssueDetailsModal } from "../modals/IssueDetailsModal";
 import { ShareIssueModal } from "../modals/ShareIssueModal";
+import { AssignIssueModal } from "../modals/AssignIssueModal";
+import { SetDeadlineModal } from "../modals/SetDeadlineModal";
 
 export class ExecuteBlockActionHandler {
     private context: UIKitBlockInteractionContext;
@@ -210,6 +212,88 @@ export class ExecuteBlockActionHandler {
                         `Failed to load issue details: ${message}`,
                     );
                 }
+                break;
+            }
+
+            case ElementEnum.JIRA_ISSUE_CREATED_ASSIGN_ACTION: {
+                const issueKey = value;
+
+                if (!issueKey || !room) {
+                    break;
+                }
+
+                try {
+                    const modal = await AssignIssueModal({
+                        app: this.app,
+                        read: this.read,
+                        modify: this.modify,
+                        http: this.http,
+                        sender: user,
+                        room,
+                        persis: this.persistence,
+                        triggerId,
+                        id: this.app.getID(),
+                        issueKey,
+                    });
+
+                    await this.modify
+                        .getUiController()
+                        .openSurfaceView(modal, { triggerId }, user);
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Failed to open assign modal: ${message}`,
+                    );
+                }
+
+                break;
+            }
+
+            case ElementEnum.JIRA_ISSUE_CREATED_SET_DEADLINE_ACTION: {
+                const issueKey = value;
+
+                if (!issueKey || !room) {
+                    break;
+                }
+
+                try {
+                    const modal = await SetDeadlineModal({
+                        app: this.app,
+                        read: this.read,
+                        modify: this.modify,
+                        http: this.http,
+                        sender: user,
+                        room,
+                        persis: this.persistence,
+                        triggerId,
+                        id: this.app.getID(),
+                        issueKey,
+                    });
+
+                    await this.modify
+                        .getUiController()
+                        .openSurfaceView(modal, { triggerId }, user);
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "An unexpected error occurred.";
+                    await sendNotification(
+                        this.read,
+                        this.modify,
+                        user,
+                        room,
+                        `Failed to open deadline modal: ${message}`,
+                    );
+                }
+
                 break;
             }
         }
