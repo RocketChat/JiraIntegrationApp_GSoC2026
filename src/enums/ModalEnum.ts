@@ -5,5 +5,5 @@ export enum ModalEnum {
     JIRA_ISSUE_LIST_MODAL = "jira-issue-list-modal",
     JIRA_SHARE_ISSUE_MODAL = "jira-share-issue-modal",
     JIRA_ASSIGN_ISSUE_MODAL = "jira-assign-issue-modal",
-    JIRA_SET_DEADLINE_MODAL = "jira-set-deadline-modal"
+    JIRA_SET_DEADLINE_MODAL = "jira-set-deadline-modal",
 }

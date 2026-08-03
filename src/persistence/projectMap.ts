@@ -1,4 +1,7 @@
-import { IPersistence, IPersistenceRead } from "@rocket.chat/apps-engine/definition/accessors";
+import {
+    IPersistence,
+    IPersistenceRead,
+} from "@rocket.chat/apps-engine/definition/accessors";
 import {
     RocketChatAssociationModel,
     RocketChatAssociationRecord,
@@ -11,7 +14,10 @@ export class ProjectMap {
         private readonly persistenceRead: IPersistenceRead,
     ) {}
 
-    public async createLink(projectKey: string, roomId: string): Promise<string> {
+    public async createLink(
+        projectKey: string,
+        roomId: string,
+    ): Promise<string> {
         return this.persis.updateByAssociations(
             this.getAssociations(roomId),
             { projectKey, roomId } as IJiraProjectMap,
@@ -19,17 +25,27 @@ export class ProjectMap {
         );
     }
 
-    public async getProjectByRoom(roomId: string): Promise<IJiraProjectMap | undefined> {
+    public async getProjectByRoom(
+        roomId: string,
+    ): Promise<IJiraProjectMap | undefined> {
         const [record] = await this.persistenceRead.readByAssociations(
             this.getAssociations(roomId),
         );
         return record as IJiraProjectMap | undefined;
     }
 
-    private getAssociations(roomId: string): Array<RocketChatAssociationRecord> {
+    private getAssociations(
+        roomId: string,
+    ): Array<RocketChatAssociationRecord> {
         return [
-            new RocketChatAssociationRecord(RocketChatAssociationModel.ROOM, roomId),
-            new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, "jira-project-map"),
+            new RocketChatAssociationRecord(
+                RocketChatAssociationModel.ROOM,
+                roomId,
+            ),
+            new RocketChatAssociationRecord(
+                RocketChatAssociationModel.MISC,
+                "jira-project-map",
+            ),
         ];
     }
 }

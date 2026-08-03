@@ -5,7 +5,11 @@ import { URLEnum } from "../enums/URLEnum";
 import { JiraApp } from "../../JiraApp";
 import { getCallbackURL } from "./getEndpointURLS";
 
-export async function getAuthorizationURL(app: JiraApp, read: IRead, user: IUser) {
+export async function getAuthorizationURL(
+    app: JiraApp,
+    read: IRead,
+    user: IUser,
+) {
     const { clientId } = await getCredentials(read);
 
     const baseURL = URLEnum.AUTHORIZE_URL;

@@ -15,17 +15,18 @@ export class AuthPersistence {
         private readonly persistenceRead: IPersistenceRead,
     ) {}
 
-    public async saveAccessToken(user: IUser, token: IJiraAuthToken): Promise<string> {
+    public async saveAccessToken(
+        user: IUser,
+        token: IJiraAuthToken,
+    ): Promise<string> {
         const associations = this.getAuthAssociations(user);
 
-        return this.persis.updateByAssociations(
-            associations,
-            token,
-            true,
-        );
+        return this.persis.updateByAssociations(associations, token, true);
     }
 
-    public async getAccessToken(user: IUser): Promise<IJiraAuthToken | undefined> {
+    public async getAccessToken(
+        user: IUser,
+    ): Promise<IJiraAuthToken | undefined> {
         const [token] = await this.persistenceRead.readByAssociations(
             this.getAuthAssociations(user),
         );
@@ -37,7 +38,9 @@ export class AuthPersistence {
         return this.persis.removeByAssociations(this.getAuthAssociations(user));
     }
 
-    private getAuthAssociations(user: IUser): Array<RocketChatAssociationRecord> {
+    private getAuthAssociations(
+        user: IUser,
+    ): Array<RocketChatAssociationRecord> {
         return [
             new RocketChatAssociationRecord(
                 RocketChatAssociationModel.USER,

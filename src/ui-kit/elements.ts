@@ -64,7 +64,7 @@ export function plainTextInputElement({
     return {
         type: "plain_text_input",
         ...(placeholder && { placeholder: plainText(placeholder) }),
-        ...(multiline  && { multiline }),
+        ...(multiline && { multiline }),
     };
 }
 

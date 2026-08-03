@@ -1,6 +1,11 @@
 import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { JiraApp } from "../../JiraApp";
-import { IRead, IModify, IHttp, IPersistence } from "@rocket.chat/apps-engine/definition/accessors";
+import {
+    IRead,
+    IModify,
+    IHttp,
+    IPersistence,
+} from "@rocket.chat/apps-engine/definition/accessors";
 import { IRoom } from "@rocket.chat/apps-engine/definition/rooms";
 
 export interface ICommandUtility {
@@ -29,5 +34,4 @@ export interface ICommandUtilityParams {
     persis: IPersistence;
     triggerId?: string;
     threadId?: string;
-
 }

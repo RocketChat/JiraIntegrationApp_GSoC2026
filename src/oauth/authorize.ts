@@ -21,7 +21,6 @@ export async function authorize(
     room: IRoom,
     persistence: IPersistence,
 ) {
-
     const url = await getAuthorizationURL(app, read, user);
     const blocks: LayoutBlock[] = [
         {
@@ -42,12 +41,5 @@ export async function authorize(
             ],
         },
     ];
-    await sendNotification(
-        read,
-        modify,
-        user,
-        room,
-        "Login with Jira",
-        blocks,
-    );
+    await sendNotification(read, modify, user, room, "Login with Jira", blocks);
 }

@@ -1,4 +1,7 @@
-import { ISetting, SettingType } from "@rocket.chat/apps-engine/definition/settings";
+import {
+    ISetting,
+    SettingType,
+} from "@rocket.chat/apps-engine/definition/settings";
 
 export const settings: ISetting[] = [
     {

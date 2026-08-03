@@ -46,8 +46,7 @@ export class ExecuteBlockActionHandler {
         const room =
             this.context.getInteractionData().room ??
             ((await this.read.getRoomReader().getById(roomIdFromView)) as
-                | IRoom
-                | undefined);
+                IRoom | undefined);
 
         switch (actionId) {
             case ElementEnum.JIRA_ISSUE_LIST_VIEW_DETAILS_ACTION: {

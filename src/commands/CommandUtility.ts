@@ -69,7 +69,7 @@ export class CommandUtility implements ICommandUtility {
             connect: () => handler.connect(),
         };
 
-        if (!command || command === 'help') {
+        if (!command || command === "help") {
             await handler.showHelp();
             return;
         }
