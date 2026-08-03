@@ -10,12 +10,13 @@ import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { JiraApp } from "../../JiraApp";
 import { AuthPersistence } from "../persistence/authPersistence";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
-import { UIKitSurfaceType } from "@rocket.chat/apps-engine/definition/uikit";
-import { TextTypes } from "../enums/TextTypes";
 import { ModalEnum } from "../enums/ModalEnum";
 import { ProjectMap } from "../persistence/projectMap";
 import { LayoutBlock, SectionBlock } from "@rocket.chat/ui-kit";
 import { ElementEnum } from "../enums/ElementEnum";
+import { buildButton } from "../ui-kit/button";
+import { buildModal } from "../ui-kit/modal";
+import { markdown } from "../ui-kit/text";
 
 export async function IssueListModal({
     app,
@@ -70,33 +71,19 @@ export async function IssueListModal({
         : [
               {
                   type: "section",
-                  text: {
-                      type: TextTypes.MARKDOWN,
-                      text: `No issues found for project *${project.projectKey}*.`,
-                  },
+                  text: markdown(
+                      `No issues found for project *${project.projectKey}*.`,
+                  ),
               },
           ];
 
-    return {
-        type: UIKitSurfaceType.MODAL,
+    return buildModal({
+        appId: id,
         id: `${ModalEnum.JIRA_ISSUE_LIST_MODAL}|${room?.id}`,
-        title: {
-            type: TextTypes.PLAIN_TEXT,
-            text: `Issues in ${project.projectKey}`,
-        },
+        title: `Issues in ${project.projectKey}`,
         blocks,
-        clearOnClose: true,
-        close: {
-            type: "button",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Close",
-            },
-            blockId: "",
-            actionId: "",
-            appId: id,
-        },
-    };
+        closeText: "Close",
+    });
 }
 
 function buildIssueListBlocks(
@@ -108,30 +95,21 @@ function buildIssueListBlocks(
     }>,
     appId: string,
 ): LayoutBlock[] {
-    const blocks: LayoutBlock[] = [];
-
-    issues.forEach((issue, index) => {
+    return issues.map((issue, index) => {
         const section: SectionBlock = {
             type: "section",
-            text: {
-                type: TextTypes.MARKDOWN,
-                text: `*${issue.key}* - ${issue.summary}\nStatus: ${issue.status || "N/A"} | Priority: ${issue.priority || "N/A"}`,
-            },
-            accessory: {
-                type: "button",
-                text: {
-                    type: TextTypes.PLAIN_TEXT,
-                    text: "View Details",
-                },
-                value: issue.key,
+            text: markdown(
+                `*${issue.key}* - ${issue.summary}\nStatus: ${issue.status || "N/A"} | Priority: ${issue.priority || "N/A"}`,
+            ),
+            accessory: buildButton({
                 appId,
+                text: "View Details",
+                value: issue.key,
                 blockId: `${ElementEnum.JIRA_ISSUE_LIST_VIEW_DETAILS_BLOCK}-${index}`,
                 actionId: ElementEnum.JIRA_ISSUE_LIST_VIEW_DETAILS_ACTION,
-            },
+            }),
         };
 
-        blocks.push(section);
+        return section;
     });
-
-    return blocks;
 }

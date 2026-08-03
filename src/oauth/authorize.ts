@@ -7,10 +7,11 @@ import { IRoom } from "@rocket.chat/apps-engine/definition/rooms";
 import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { JiraApp } from "../../JiraApp";
 import { LayoutBlock } from "@rocket.chat/ui-kit";
-import { TextTypes } from "../enums/TextTypes";
 import { ElementEnum } from "../enums/ElementEnum";
 import { sendNotification } from "../helpers/message";
 import { getAuthorizationURL } from "../helpers/getAuthorizationURL";
+import { buildButton } from "../ui-kit/button";
+import { plainText } from "../ui-kit/text";
 
 export async function authorize(
     app: JiraApp,
@@ -25,28 +26,19 @@ export async function authorize(
     const blocks: LayoutBlock[] = [
         {
             type: "section",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Click 👇 to Login with Jira",
-                emoji: true,
-            },
+            text: plainText("Click 👇 to Login with Jira"),
         },
         {
             type: "actions",
             elements: [
-                {
-                    type: "button",
-                    actionId: ElementEnum.LOGIN_BUTTON_ACTION,
+                buildButton({
                     appId: app.getID(),
+                    text: "Login with Jira",
                     blockId: ElementEnum.LOGIN_BUTTON_BLOCK,
-                    text: {
-                        type: "plain_text",
-                        text: "Login with Jira",
-                        emoji: true,
-                    },
+                    actionId: ElementEnum.LOGIN_BUTTON_ACTION,
+                    url,
                     style: "primary",
-                    url: url
-                },
+                }),
             ],
         },
     ];
