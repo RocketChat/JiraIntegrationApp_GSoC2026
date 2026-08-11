@@ -10,17 +10,15 @@ import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { JiraApp } from "../../JiraApp";
 import { AuthPersistence } from "../persistence/authPersistence";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
-import { UIKitSurfaceType } from "@rocket.chat/apps-engine/definition/uikit";
 import { ElementEnum } from "../enums/ElementEnum";
-import { TextTypes } from "../enums/TextTypes";
 import { ModalEnum } from "../enums/ModalEnum";
 import { getCloudURL } from "../helpers/getSettings";
-import {
-    ActionsBlock,
-    InputBlock,
-    LayoutBlock,
-    SectionBlock,
-} from "@rocket.chat/ui-kit";
+import { ActionsBlock, LayoutBlock, SectionBlock } from "@rocket.chat/ui-kit";
+import { buildButton } from "../ui-kit/button";
+import { buildInputBlock } from "../ui-kit/inputBlock";
+import { buildModal } from "../ui-kit/modal";
+import { markdown } from "../ui-kit/text";
+import { plainTextInputElement } from "../ui-kit/elements";
 
 const COMMENTS_PAGE_SIZE = 3;
 
@@ -72,136 +70,86 @@ export async function IssueDetailsModal({
 
     const summarySection: SectionBlock = {
         type: "section",
-        text: {
-            type: TextTypes.MARKDOWN,
-            text: `*${issue.summary}*\n${issueKey} · ${issue.issueType}`,
-        },
+        text: markdown(`*${issue.summary}*\n${issueKey} · ${issue.issueType}`),
     };
 
     const issueActionsBlock: ActionsBlock = {
         type: "actions",
         blockId: ElementEnum.JIRA_ISSUE_DETAILS_OPEN_BLOCK,
         elements: [
-            {
-                type: "button",
-                text: {
-                    type: TextTypes.PLAIN_TEXT,
-                    text: "Open in Jira",
-                },
-                url: issueURL,
+            buildButton({
                 appId: id,
+                text: "Open in Jira",
+                url: issueURL,
                 blockId: ElementEnum.JIRA_ISSUE_DETAILS_OPEN_BLOCK,
                 actionId: ElementEnum.JIRA_ISSUE_DETAILS_OPEN_ACTION,
-            },
-            {
-                type: "button",
-                text: {
-                    type: TextTypes.PLAIN_TEXT,
-                    text: "Share Issue",
-                },
-                value: issueKey,
+            }),
+            buildButton({
                 appId: id,
+                text: "Share Issue",
+                value: issueKey,
                 blockId: ElementEnum.JIRA_ISSUE_DETAILS_SHARE_BLOCK,
                 actionId: ElementEnum.JIRA_ISSUE_DETAILS_SHARE_ACTION,
-            },
+            }),
         ],
     };
 
     const detailsSection: SectionBlock = {
         type: "section",
         fields: [
-            {
-                type: TextTypes.MARKDOWN,
-                text: `*Status*\n${issue.status || "N/A"}`,
-            },
-            {
-                type: TextTypes.MARKDOWN,
-                text: `*Priority*\n${issue.priority || "N/A"}`,
-            },
-            {
-                type: TextTypes.MARKDOWN,
-                text: `*Assignee*\n${issue.assigneeName || "Unassigned"}`,
-            },
-            {
-                type: TextTypes.MARKDOWN,
-                text: `*Deadline*\n${issue.deadline ? issue.deadline.toDateString() : "N/A"}`,
-            },
+            markdown(`*Status*\n${issue.status || "N/A"}`),
+            markdown(`*Priority*\n${issue.priority || "N/A"}`),
+            markdown(`*Assignee*\n${issue.assigneeName || "Unassigned"}`),
+            markdown(
+                `*Deadline*\n${issue.deadline ? issue.deadline.toDateString() : "N/A"}`,
+            ),
         ],
     };
 
     const descriptionSection: SectionBlock = {
         type: "section",
-        text: {
-            type: TextTypes.MARKDOWN,
-            text: `*Description*\n${issue.description || "N/A"}`,
-        },
+        text: markdown(`*Description*\n${issue.description || "N/A"}`),
     };
 
     const commentsHeaderSection: SectionBlock = {
         type: "section",
-        text: {
-            type: TextTypes.MARKDOWN,
-            text: `*Comments (${totalComments})*`,
-        },
+        text: markdown(`*Comments (${totalComments})*`),
     };
 
     const commentSections: SectionBlock[] = comments.length
         ? comments.map((comment) => ({
               type: "section",
-              text: {
-                  type: TextTypes.MARKDOWN,
-                  text: `*${comment.author}* · ${comment.created.toDateString()}\n${comment.body}`,
-              },
+              text: markdown(
+                  `*${comment.author}* · ${comment.created.toDateString()}\n${comment.body}`,
+              ),
           }))
-        : [
-              {
-                  type: "section",
-                  text: {
-                      type: TextTypes.MARKDOWN,
-                      text: "_No comments yet._",
-                  },
-              },
-          ];
+        : [{ type: "section", text: markdown("_No comments yet._") }];
 
     const loadMoreCommentsBlock: ActionsBlock | undefined = hasMoreComments
         ? {
               type: "actions",
               blockId: ElementEnum.JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_BLOCK,
               elements: [
-                  {
-                      type: "button",
-                      text: {
-                          type: TextTypes.PLAIN_TEXT,
-                          text: "Load more Comments",
-                      },
+                  buildButton({
                       appId: id,
-                      blockId: ElementEnum.JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_BLOCK,
+                      text: "Load more Comments",
+                      blockId:
+                          ElementEnum.JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_BLOCK,
                       actionId:
                           ElementEnum.JIRA_ISSUE_DETAILS_LOAD_MORE_COMMENTS_ACTION,
                       value: String(commentsLimit + COMMENTS_PAGE_SIZE),
-                  },
+                  }),
               ],
           }
         : undefined;
 
-    const commentInput: InputBlock = {
-        type: "input",
+    const commentInput = buildInputBlock({
+        appId: id,
         blockId: ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_BLOCK,
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Add a comment",
-        },
-        element: {
-            type: "plain_text_input",
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Write a comment...",
-            },
-            appId: id,
-            blockId: ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_BLOCK,
-            actionId: ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_ACTION,
-        },
-    };
+        actionId: ElementEnum.JIRA_ISSUE_DETAILS_COMMENT_ACTION,
+        label: "Add a comment",
+        element: plainTextInputElement({ placeholder: "Write a comment..." }),
+    });
 
     const blocks: LayoutBlock[] = [
         summarySection,
@@ -217,34 +165,14 @@ export async function IssueDetailsModal({
         ...(loadMoreCommentsBlock ? [loadMoreCommentsBlock] : []),
     ];
 
-    return {
-        type: UIKitSurfaceType.MODAL,
+    return buildModal({
+        appId: id,
         id: `${ModalEnum.JIRA_ISSUE_DETAILS_MODAL}|${room?.id}|${issueKey}`,
-        title: {
-            type: TextTypes.PLAIN_TEXT,
-            text: `Issue ${issueKey}`,
-        },
+        title: `Issue ${issueKey}`,
         blocks,
-        submit: {
-            type: "button",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Post Comment",
-            },
-            blockId: ElementEnum.JIRA_ISSUE_DETAILS_SUBMIT_BLOCK,
-            actionId: ElementEnum.JIRA_ISSUE_DETAILS_SUBMIT_ACTION,
-            appId: id,
-        },
-        clearOnClose: true,
-        close: {
-            type: "button",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Close",
-            },
-            blockId: "",
-            actionId: "",
-            appId: id,
-        },
-    };
+        submitText: "Post Comment",
+        submitBlockId: ElementEnum.JIRA_ISSUE_DETAILS_SUBMIT_BLOCK,
+        submitActionId: ElementEnum.JIRA_ISSUE_DETAILS_SUBMIT_ACTION,
+        closeText: "Close",
+    });
 }

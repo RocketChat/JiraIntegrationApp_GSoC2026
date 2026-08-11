@@ -10,12 +10,29 @@ import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { JiraApp } from "../../JiraApp";
 import { AuthPersistence } from "../persistence/authPersistence";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
-import { UIKitSurfaceType } from "@rocket.chat/apps-engine/definition/uikit";
 import { ElementEnum } from "../enums/ElementEnum";
-import { TextTypes } from "../enums/TextTypes";
 import { ModalEnum } from "../enums/ModalEnum";
 import { ProjectMap } from "../persistence/projectMap";
-import { InputBlock } from "@rocket.chat/ui-kit";
+import { buildInputBlock } from "../ui-kit/inputBlock";
+import { buildModal } from "../ui-kit/modal";
+import { buildOption, buildOptions } from "../ui-kit/options";
+import {
+    datePickerElement,
+    plainTextInputElement,
+    staticSelectElement,
+    usersSelectElement,
+} from "../ui-kit/elements";
+
+const ISSUE_TYPE_OPTIONS = buildOptions(
+    ["Task", "Bug", "Story", "Epic"].map((value) => ({ text: value, value })),
+);
+
+const PRIORITY_OPTIONS = buildOptions(
+    ["Highest", "High", "Medium", "Low", "Lowest"].map((value) => ({
+        text: value,
+        value,
+    })),
+);
 
 export async function CreateIssueModal({
     app,
@@ -57,210 +74,97 @@ export async function CreateIssueModal({
         ? projects.find((p) => p.key === linkedProject.projectKey)
         : undefined;
 
-    const projectDropdown: InputBlock = {
-        type: "input",
+    const projectDropdown = buildInputBlock({
+        appId: id,
         blockId: ElementEnum.JIRA_PROJECT_SELECT_BLOCK,
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Project",
-        },
-        element: {
-            type: "static_select",
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Select Project",
-            },
-            ...(linkedProjectData && {
-                initialOption: {
-                    text: {
-                        type: TextTypes.PLAIN_TEXT,
-                        text: `${linkedProjectData.key} - ${linkedProjectData.name}`,
-                    },
-                    value: linkedProjectData.key,
-                },
-            }),
-            options: projects.map((project) => ({
-                text: {
-                    type: TextTypes.PLAIN_TEXT,
+        actionId: ElementEnum.JIRA_PROJECT_SELECT_ACTION,
+        label: "Project",
+        element: staticSelectElement({
+            placeholder: "Select Project",
+            options: buildOptions(
+                projects.map((project) => ({
                     text: `${project.key} - ${project.name}`,
-                },
-                value: project.key,
-            })),
-            appId: id,
-            blockId: ElementEnum.JIRA_PROJECT_SELECT_BLOCK,
-            actionId: ElementEnum.JIRA_PROJECT_SELECT_ACTION,
-        },
-    };
+                    value: project.key,
+                })),
+            ),
+            initialOption: linkedProjectData
+                ? buildOption(
+                      `${linkedProjectData.key} - ${linkedProjectData.name}`,
+                      linkedProjectData.key,
+                  )
+                : undefined,
+        }),
+    });
 
-    const issueTypeDropdown: InputBlock = {
-        type: "input",
+    const issueTypeDropdown = buildInputBlock({
+        appId: id,
         blockId: ElementEnum.JIRA_CREATE_ISSUE_TYPE_BLOCK,
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Issue Type",
-        },
-        element: {
-            type: "static_select",
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Select issue type",
-            },
-            initialOption: {
-                text: { type: TextTypes.PLAIN_TEXT, text: "Task" },
-                value: "Task",
-            },
-            options: [
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "Task" },
-                    value: "Task",
-                },
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "Bug" },
-                    value: "Bug",
-                },
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "Story" },
-                    value: "Story",
-                },
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "Epic" },
-                    value: "Epic",
-                },
-            ],
-            appId: id,
-            blockId: ElementEnum.JIRA_CREATE_ISSUE_TYPE_BLOCK,
-            actionId: ElementEnum.JIRA_CREATE_ISSUE_TYPE_ACTION,
-        },
-    };
+        actionId: ElementEnum.JIRA_CREATE_ISSUE_TYPE_ACTION,
+        label: "Issue Type",
+        element: staticSelectElement({
+            placeholder: "Select issue type",
+            options: ISSUE_TYPE_OPTIONS,
+            initialOption: buildOption("Task", "Task"),
+        }),
+    });
 
-    const summaryInput: InputBlock = {
-        type: "input",
+    const summaryInput = buildInputBlock({
+        appId: id,
         blockId: ElementEnum.JIRA_CREATE_ISSUE_SUMMARY_BLOCK,
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Summary",
-        },
-        element: {
-            type: "plain_text_input",
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Enter issue summary",
-            },
-            appId: id,
-            blockId: ElementEnum.JIRA_CREATE_ISSUE_SUMMARY_BLOCK,
-            actionId: ElementEnum.JIRA_CREATE_ISSUE_SUMMARY_ACTION,
-        },
-    };
+        actionId: ElementEnum.JIRA_CREATE_ISSUE_SUMMARY_ACTION,
+        label: "Summary",
+        element: plainTextInputElement({
+            placeholder: "Enter issue summary",
+        }),
+    });
 
-    const descriptionInput: InputBlock = {
-        type: "input",
+    const descriptionInput = buildInputBlock({
+        appId: id,
         blockId: ElementEnum.JIRA_CREATE_ISSUE_DESCRIPTION_BLOCK,
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Description",
-        },
+        actionId: ElementEnum.JIRA_CREATE_ISSUE_DESCRIPTION_ACTION,
+        label: "Description",
         optional: true,
-        element: {
-            type: "plain_text_input",
+        element: plainTextInputElement({
+            placeholder: "Enter issue description",
             multiline: true,
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Enter issue description",
-            },
-            appId: id,
-            blockId: ElementEnum.JIRA_CREATE_ISSUE_DESCRIPTION_BLOCK,
-            actionId: ElementEnum.JIRA_CREATE_ISSUE_DESCRIPTION_ACTION,
-        },
-    };
+        }),
+    });
 
-    const priorityDropdown: InputBlock = {
-        type: "input",
+    const priorityDropdown = buildInputBlock({
+        appId: id,
         blockId: ElementEnum.JIRA_CREATE_ISSUE_PRIORITY_BLOCK,
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Priority",
-        },
-        element: {
-            type: "static_select",
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Select priority",
-            },
-            options: [
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "Highest" },
-                    value: "Highest",
-                },
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "High" },
-                    value: "High",
-                },
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "Medium" },
-                    value: "Medium",
-                },
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "Low" },
-                    value: "Low",
-                },
-                {
-                    text: { type: TextTypes.PLAIN_TEXT, text: "Lowest" },
-                    value: "Lowest",
-                },
-            ],
-            appId: id,
-            blockId: ElementEnum.JIRA_CREATE_ISSUE_PRIORITY_BLOCK,
-            actionId: ElementEnum.JIRA_CREATE_ISSUE_PRIORITY_ACTION,
-        },
-    };
+        actionId: ElementEnum.JIRA_CREATE_ISSUE_PRIORITY_ACTION,
+        label: "Priority",
+        element: staticSelectElement({
+            placeholder: "Select priority",
+            options: PRIORITY_OPTIONS,
+        }),
+    });
 
-    const assigneeInput: InputBlock = {
-        type: "input",
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Assignee (optional)",
-        },
-        optional: true,
+    const assigneeInput = buildInputBlock({
+        appId: id,
         blockId: ElementEnum.JIRA_CREATE_ISSUE_ASSIGNEE_BLOCK,
-        element: {
-            type: "users_select",
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Enter assignee email or leave blank",
-            },
-            appId: id,
-            blockId: ElementEnum.JIRA_CREATE_ISSUE_ASSIGNEE_BLOCK,
-            actionId: ElementEnum.JIRA_CREATE_ISSUE_ASSIGNEE_ACTION,
-        },
-    };
-
-    const deadlineInput: InputBlock = {
-        type: "input",
-        blockId: ElementEnum.JIRA_CREATE_ISSUE_DEADLINE_BLOCK,
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Deadline (optional)",
-        },
+        actionId: ElementEnum.JIRA_CREATE_ISSUE_ASSIGNEE_ACTION,
+        label: "Assignee (optional)",
         optional: true,
-        element: {
-            type: "datepicker",
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "mm/dd/yyyy",
-            },
-            appId: id,
-            blockId: ElementEnum.JIRA_CREATE_ISSUE_DEADLINE_BLOCK,
-            actionId: ElementEnum.JIRA_CREATE_ISSUE_DEADLINE_ACTION,
-        },
-    };
+        element: usersSelectElement({
+            placeholder: "Enter assignee email or leave blank",
+        }),
+    });
 
-    return {
-        type: UIKitSurfaceType.MODAL,
-        id: ModalEnum.JIRA_CREATE_ISSUE_MODAL + "|" + room?.id,
-        title: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Create Jira Issue",
-        },
+    const deadlineInput = buildInputBlock({
+        appId: id,
+        blockId: ElementEnum.JIRA_CREATE_ISSUE_DEADLINE_BLOCK,
+        actionId: ElementEnum.JIRA_CREATE_ISSUE_DEADLINE_ACTION,
+        label: "Deadline (optional)",
+        optional: true,
+        element: datePickerElement({ placeholder: "mm/dd/yyyy" }),
+    });
+
+    return buildModal({
+        appId: id,
+        id: `${ModalEnum.JIRA_CREATE_ISSUE_MODAL}|${room?.id}`,
+        title: "Create Jira Issue",
         blocks: [
             projectDropdown,
             issueTypeDropdown,
@@ -270,26 +174,8 @@ export async function CreateIssueModal({
             assigneeInput,
             deadlineInput,
         ],
-        submit: {
-            type: "button",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Create",
-            },
-            blockId: ElementEnum.JIRA_CREATE_ISSUE_SUBMIT_BLOCK,
-            actionId: ElementEnum.JIRA_CREATE_ISSUE_SUBMIT_ACTION,
-            appId: id,
-        },
-        clearOnClose: true,
-        close: {
-            type: "button",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Cancel",
-            },
-            blockId: "",
-            actionId: "",
-            appId: id,
-        },
-    };
+        submitText: "Create",
+        submitBlockId: ElementEnum.JIRA_CREATE_ISSUE_SUBMIT_BLOCK,
+        submitActionId: ElementEnum.JIRA_CREATE_ISSUE_SUBMIT_ACTION,
+    });
 }

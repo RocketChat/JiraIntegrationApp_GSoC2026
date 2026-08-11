@@ -5,8 +5,13 @@
         "tslint": "^5.10.0",
         "typescript": "^5.6.2"
     },
+    "scripts": {
+        "lint": "prettier --check ./src",
+        "format": "prettier --write ./src"
+    },
     "dependencies": {
         "@rocket.chat/icons": "^0.38.0",
-        "@rocket.chat/ui-kit": "^0.36.1"
+        "@rocket.chat/ui-kit": "^0.36.1",
+        "prettier": "^3.9.6"
     }
 }

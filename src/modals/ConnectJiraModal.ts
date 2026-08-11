@@ -10,11 +10,12 @@ import { IUser } from "@rocket.chat/apps-engine/definition/users";
 import { JiraApp } from "../../JiraApp";
 import { AuthPersistence } from "../persistence/authPersistence";
 import { IJiraAuthToken } from "../interfaces/IJiraOAuthToken";
-import { UIKitSurfaceType } from "@rocket.chat/apps-engine/definition/uikit";
 import { ElementEnum } from "../enums/ElementEnum";
-import { TextTypes } from "../enums/TextTypes";
 import { ModalEnum } from "../enums/ModalEnum";
-import { InputBlock } from "@rocket.chat/ui-kit";
+import { buildInputBlock } from "../ui-kit/inputBlock";
+import { buildModal } from "../ui-kit/modal";
+import { buildOptions } from "../ui-kit/options";
+import { staticSelectElement } from "../ui-kit/elements";
 
 export async function ConnectJiraProject({
     app,
@@ -48,59 +49,29 @@ export async function ConnectJiraProject({
         .getJiraSDK()
         .getJiraProjects(token as IJiraAuthToken, read, sender, persis);
 
-    const projectDropdown: InputBlock = {
-        type: "input",
-        label: {
-            type: TextTypes.PLAIN_TEXT,
-            text: "Select Jira Project",
-        },
-        element: {
-            type: "static_select",
-            placeholder: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Choose a project...",
-            },
-            options: projects.map((project) => ({
-                text: {
-                    type: TextTypes.PLAIN_TEXT,
+    const projectDropdown = buildInputBlock({
+        appId: id,
+        blockId: ElementEnum.JIRA_PROJECT_SELECT_BLOCK,
+        actionId: ElementEnum.JIRA_PROJECT_SELECT_ACTION,
+        label: "Select Jira Project",
+        element: staticSelectElement({
+            placeholder: "Choose a project...",
+            options: buildOptions(
+                projects.map((project) => ({
                     text: `${project.key} - ${project.name}`,
-                },
-                value: project.key,
-            })),
-            appId: id,
-            blockId: ElementEnum.JIRA_PROJECT_SELECT_BLOCK,
-            actionId: ElementEnum.JIRA_PROJECT_SELECT_ACTION,
-        },
-    };
+                    value: project.key,
+                })),
+            ),
+        }),
+    });
 
-    return {
-        type: UIKitSurfaceType.MODAL,
-        id: ModalEnum.JIRA_CONNECT_MODAL + "|" + room?.id,
-        title: {
-            type: TextTypes.PLAIN_TEXT,
-            text: `Connect #${room?.slugifiedName} with Jira Project`,
-        },
+    return buildModal({
+        appId: id,
+        id: `${ModalEnum.JIRA_CONNECT_MODAL}|${room?.id}`,
+        title: `Connect #${room?.slugifiedName} with Jira Project`,
         blocks: [projectDropdown],
-        submit: {
-            type: "button",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Connect",
-            },
-            blockId: ElementEnum.JIRA_CONNECT_BLOCK,
-            actionId: ElementEnum.JIRA_CONNECT_ACTION,
-            appId: id,
-        },
-        clearOnClose: true,
-        close: {
-            type: "button",
-            text: {
-                type: TextTypes.PLAIN_TEXT,
-                text: "Cancel",
-            },
-            blockId: "",
-            actionId: "",
-            appId: id,
-        },
-    };
+        submitText: "Connect",
+        submitBlockId: ElementEnum.JIRA_CONNECT_BLOCK,
+        submitActionId: ElementEnum.JIRA_CONNECT_ACTION,
+    });
 }

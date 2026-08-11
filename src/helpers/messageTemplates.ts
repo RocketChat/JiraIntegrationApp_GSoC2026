@@ -1,7 +1,7 @@
 import { ActionsBlock, LayoutBlock } from "@rocket.chat/ui-kit";
 import { IMessageAttachment } from "@rocket.chat/apps-engine/definition/messages";
 import { ElementEnum } from "../enums/ElementEnum";
-import { TextTypes } from "../enums/TextTypes";
+import { buildButton } from "../ui-kit/button";
 
 export function issueQuickActionsBlock(params: {
     appId: string;
@@ -14,25 +14,27 @@ export function issueQuickActionsBlock(params: {
     const elements: ActionsBlock["elements"][number][] = [];
 
     if (!hasAssignee) {
-        elements.push({
-            type: "button",
-            text: { type: TextTypes.PLAIN_TEXT, text: "Assign this issue" },
-            appId,
-            value: issueKey,
-            blockId: ElementEnum.JIRA_ISSUE_CREATED_ASSIGN_BLOCK,
-            actionId: ElementEnum.JIRA_ISSUE_CREATED_ASSIGN_ACTION,
-        });
+        elements.push(
+            buildButton({
+                appId,
+                text: "Assign this issue",
+                value: issueKey,
+                blockId: ElementEnum.JIRA_ISSUE_CREATED_ASSIGN_BLOCK,
+                actionId: ElementEnum.JIRA_ISSUE_CREATED_ASSIGN_ACTION,
+            }),
+        );
     }
 
     if (!hasDeadline) {
-        elements.push({
-            type: "button",
-            text: { type: TextTypes.PLAIN_TEXT, text: "Set Deadline" },
-            appId,
-            value: issueKey,
-            blockId: ElementEnum.JIRA_ISSUE_CREATED_SET_DEADLINE_BLOCK,
-            actionId: ElementEnum.JIRA_ISSUE_CREATED_SET_DEADLINE_ACTION,
-        });
+        elements.push(
+            buildButton({
+                appId,
+                text: "Set Deadline",
+                value: issueKey,
+                blockId: ElementEnum.JIRA_ISSUE_CREATED_SET_DEADLINE_BLOCK,
+                actionId: ElementEnum.JIRA_ISSUE_CREATED_SET_DEADLINE_ACTION,
+            }),
+        );
     }
 
     if (elements.length === 0) {
